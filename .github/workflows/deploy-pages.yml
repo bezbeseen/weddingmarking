@@ -1,0 +1,86 @@
+name: Deploy wedding marketing preview
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Sync route metadata
+        run: node scripts/sync-route-metadata.mjs
+
+      - name: Prepare GitHub Pages artifact
+        run: |
+          mkdir -p _site
+          rsync -a --exclude '.git' --exclude '.github' --exclude '_site' ./ _site/
+          touch _site/.nojekyll
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const root = '_site';
+          const extensions = new Set(['.html', '.js', '.css']);
+          const replacements = [
+            ['"/assets/', '"/weddingmarking/assets/'],
+            ["'/assets/", "'/weddingmarking/assets/"],
+            ['"/src/', '"/weddingmarking/src/'],
+            ["'/src/", "'/weddingmarking/src/"],
+            ['"/construction/', '"/weddingmarking/construction/'],
+            ["'/construction/", "'/weddingmarking/construction/"],
+            ['"/event-planners/', '"/weddingmarking/event-planners/'],
+            ["'/event-planners/", "'/weddingmarking/event-planners/"],
+            ['"/weddings/', '"/weddingmarking/weddings/'],
+            ["'/weddings/", "'/weddingmarking/weddings/"],
+            ['"/real-estate/', '"/weddingmarking/real-estate/'],
+            ["'/real-estate/", "'/weddingmarking/real-estate/"],
+            ['href="/"', 'href="/weddingmarking/"'],
+            ["href='/'", "href='/weddingmarking/'"]
+          ];
+
+          function walk(dir) {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) walk(full);
+              else if (extensions.has(path.extname(entry.name))) {
+                let text = fs.readFileSync(full, 'utf8');
+                for (const [from, to] of replacements) text = text.split(from).join(to);
+                fs.writeFileSync(full, text);
+              }
+            }
+          }
+          walk(root);
+          NODE
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
