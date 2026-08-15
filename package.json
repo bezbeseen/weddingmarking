@@ -1,0 +1,12 @@
+{
+  "name": "be-seen-multi-vertical-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/sync-route-metadata.mjs && python3 -m http.server 4173",
+    "preview": "node scripts/sync-route-metadata.mjs && python3 -m http.server 4173",
+    "sync:metadata": "node scripts/sync-route-metadata.mjs",
+    "check": "node scripts/sync-route-metadata.mjs && node scripts/validate-site.mjs"
+  }
+}
