@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 675" role="img" aria-labelledby="title desc">
+  <title id="title">Property pages placeholder</title>
+  <desc id="desc">Placeholder visual for QR-connected listing pages, lead forms, and property information pages.</desc>
+  <rect width="900" height="675" fill="#eef2ff"/>
+  <rect x="92" y="102" width="450" height="330" rx="6" fill="#252525"/>
+  <rect x="126" y="138" width="382" height="240" fill="#ffffff"/>
+  <rect x="158" y="170" width="154" height="18" fill="#ff711f"/>
+  <rect x="158" y="222" width="282" height="14" fill="#c8cfdd"/>
+  <rect x="158" y="256" width="246" height="14" fill="#c8cfdd"/>
+  <rect x="158" y="316" width="118" height="40" fill="#47e520"/>
+  <rect x="606" y="142" width="176" height="236" fill="#ffffff" stroke="#222222" stroke-width="7"/>
+  <rect x="638" y="178" width="112" height="112" fill="#f5f6fa"/>
+  <g fill="#222222">
+    <rect x="652" y="192" width="24" height="24"/>
+    <rect x="710" y="192" width="24" height="24"/>
+    <rect x="652" y="250" width="24" height="24"/>
+    <rect x="686" y="226" width="16" height="16"/>
+    <rect x="718" y="258" width="16" height="16"/>
+  </g>
+  <rect x="150" y="494" width="600" height="34" fill="#ff711f"/>
+  <text x="450" y="592" text-anchor="middle" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="900">QR PROPERTY PAGES</text>
+</svg>

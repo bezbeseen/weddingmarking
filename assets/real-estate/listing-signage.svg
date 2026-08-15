@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 675" role="img" aria-labelledby="title desc">
+  <title id="title">Listing signage placeholder</title>
+  <desc id="desc">Placeholder visual for listing signs, open house signs, riders, and directional signs.</desc>
+  <rect width="900" height="675" fill="#f5f6fa"/>
+  <rect x="95" y="90" width="710" height="485" rx="8" fill="#ffffff"/>
+  <rect x="180" y="150" width="300" height="225" fill="#8dafef"/>
+  <path d="M210 350 L310 238 L382 302 L430 255 L470 350 Z" fill="#ffffff"/>
+  <rect x="552" y="158" width="170" height="255" fill="#ffffff" stroke="#222222" stroke-width="8"/>
+  <rect x="580" y="190" width="114" height="28" fill="#ff711f"/>
+  <rect x="580" y="248" width="114" height="18" fill="#c8cfdd"/>
+  <rect x="580" y="286" width="84" height="18" fill="#c8cfdd"/>
+  <rect x="614" y="413" width="28" height="110" fill="#222222"/>
+  <rect x="152" y="430" width="360" height="36" fill="#47e520"/>
+  <text x="450" y="594" text-anchor="middle" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="900">LISTING SIGNAGE</text>
+</svg>
