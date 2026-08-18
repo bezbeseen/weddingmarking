@@ -48,6 +48,8 @@ jobs:
             ["'/weddings/", "'/weddingmarking/weddings/"],
             ['"/real-estate/', '"/weddingmarking/real-estate/'],
             ["'/real-estate/", "'/weddingmarking/real-estate/"],
+            ['"/builder/', '"/weddingmarking/builder/'],
+            ["'/builder/", "'/weddingmarking/builder/"],
             ['href="/"', 'href="/weddingmarking/"'],
             ["href='/'", "href='/weddingmarking/'"]
           ];

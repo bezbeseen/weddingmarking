@@ -4,7 +4,13 @@ import { dirname, join } from "node:path";
 import { futureVerticals, verticals } from "../src/data/verticals/index.js";
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-const requiredRoutes = ["index.html", "construction/index.html", "event-planners/index.html", "weddings/index.html"];
+const requiredRoutes = [
+  "index.html",
+  "construction/index.html",
+  "event-planners/index.html",
+  "weddings/index.html",
+  "builder/index.html",
+];
 const missing = [];
 const contentIssues = [];
 

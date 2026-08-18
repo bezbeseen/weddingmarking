@@ -56,9 +56,11 @@ function setMeta(meta = {}) {
   }
 }
 
-function renderVerticalPage(vertical) {
-  setMeta(vertical.meta);
-  document.documentElement.dataset.vertical = vertical.key;
+export function renderVerticalPage(vertical, { updateDocument = true } = {}) {
+  if (updateDocument) {
+    setMeta(vertical.meta);
+    document.documentElement.dataset.vertical = vertical.key;
+  }
 
   if (vertical.template === "wedding-flagship-v2") {
     const flagship = vertical.flagshipV2 || {};
@@ -167,6 +169,7 @@ function renderHomePage() {
             ${activeVerticals
               .map((vertical) => `<a href="${escapeHtml(vertical.path)}">${escapeHtml(vertical.path.replace(/\/$/, ""))}</a>`)
               .join("")}
+            <a class="hub-staff-link" href="/builder/">Staff builder</a>
           </div>
         </div>
       </section>

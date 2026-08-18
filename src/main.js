@@ -1,4 +1,5 @@
 import { renderApp } from "./App.js";
+import { mountBuilder } from "./builder/gui.js";
 
 function getPageKey() {
   const bodyKey = document.body.dataset.vertical || document.body.dataset.page;
@@ -9,7 +10,12 @@ function getPageKey() {
 }
 
 const app = document.querySelector("#app");
+const pageKey = getPageKey();
 
 if (app) {
-  app.innerHTML = renderApp(getPageKey());
+  if (pageKey === "builder") {
+    mountBuilder(app);
+  } else {
+    app.innerHTML = renderApp(pageKey);
+  }
 }
