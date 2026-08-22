@@ -26,6 +26,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Build preview site
+        run: |
+          mkdir -p _site/slap-15
+          cp -R slap-15/. _site/slap-15/
+          printf '<!doctype html><meta charset="utf-8"><title>SLAP 15 Preview</title><p><a href="slap-15/">Open SLAP 15</a></p>' > _site/index.html
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
@@ -33,7 +38,7 @@ jobs:
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "./slap-15"
+          path: "./_site"
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
