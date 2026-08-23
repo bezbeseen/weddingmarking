@@ -2,7 +2,7 @@
   const DATABASE_URL='Tap_Trivia_Question_Database.csv';
   const DB_NAME='tapTriviaQuestionDatabase';
   const DB_STORE='files';
-  const DB_KEY='cleaned-question-database';
+  const DB_KEY='final-question-database-v1';
   const CATEGORIES=['General Knowledge','Geography','Movies','Music','Literature & Language','History','Television','Sports','Arts, Culture & Technology','Science & Nature','Food & Drink','Pop Culture & Celebrities'].map(name=>({id:name,name}));
   let database=null,loadingPromise=null;
   const shuffle=items=>{const a=items.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
@@ -11,7 +11,8 @@
     const sourceQuestion=(row.question||'').trim(),answer=(row.answers||'').trim(),category=(row.assigned_category||'General Knowledge').trim(),difficulty=(row.difficulty||'').trim().toLowerCase();
     const options=[row.option_a,row.option_b,row.option_c,row.option_d].map(v=>(v||'').trim()).filter(Boolean);
     const declared=(row.type||'').trim().toLowerCase();
-    const type=declared==='multiple'||options.length===4?'multiple':(declared==='boolean'?'boolean':'open');
+    const answerLower=answer.toLowerCase();
+    const type=(answerLower==='true'||answerLower==='false')?'boolean':(declared==='multiple'||options.length===4?'multiple':(declared==='boolean'?'boolean':'open'));
     return{id:(row.question_id||'').trim(),sourceQuestion,answer,category,categoryId:category,difficulty,type,options,source:(row.source||'Tap Trivia Question Database').trim()||'Tap Trivia Question Database'};
   }
   function normalizeCsv(text){return parseCsv(text).map(normalize).filter(q=>q.sourceQuestion&&q.answer&&q.difficulty)}
@@ -19,8 +20,11 @@
   async function readStoredCsv(){try{const db=await openDb();return await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).get(DB_KEY);req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error)})}catch(_){return null}}
   async function writeStoredCsv(text){const db=await openDb();return new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(text,DB_KEY);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error||new Error('Could not save the question database.'))})}
   async function importFile(file,onStatus){if(!file)throw new Error('Choose the Tap Trivia question database CSV.');onStatus&&onStatus('Reading '+file.name+'...');const text=await file.text();const rows=normalizeCsv(text);if(!rows.length)throw new Error('That file does not contain usable Tap Trivia questions.');await writeStoredCsv(text);database=rows;onStatus&&onStatus(database.length+' questions saved on this browser.');return database.length}
-  async function init(onStatus){if(database)return database;if(loadingPromise)return loadingPromise;loadingPromise=(async()=>{onStatus&&onStatus('Loading Tap Trivia question database...');const stored=await readStoredCsv();if(stored){const rows=normalizeCsv(stored);if(rows.length){database=rows;onStatus&&onStatus(database.length+' questions loaded from this browser.');return database}}let response=null;try{response=await fetch(DATABASE_URL,{cache:'no-store'})}catch(_){}if(response&&response.ok){const text=await response.text();const rows=normalizeCsv(text);if(rows.length){database=rows;try{await writeStoredCsv(text)}catch(_){}onStatus&&onStatus(database.length+' questions loaded from the Tap Trivia database.');return database}}throw new Error('Load Tap_Trivia_Question_Database.csv once on this browser to begin. No outside trivia service will be used.')})();try{return await loadingPromise}finally{loadingPromise=null}}
+  async function init(onStatus){if(database)return database;if(loadingPromise)return loadingPromise;loadingPromise=(async()=>{onStatus&&onStatus('Loading Tap Trivia question database...');const stored=await readStoredCsv();if(stored){const rows=normalizeCsv(stored);if(rows.length){database=rows;onStatus&&onStatus(database.length+' questions loaded from this browser.');return database}}let response=null;try{response=await fetch(DATABASE_URL,{cache:'no-store'})}catch(_){}if(response&&response.ok){const text=await response.text();const rows=normalizeCsv(text);if(rows.length){database=rows;try{await writeStoredCsv(text)}catch(_){}onStatus&&onStatus(database.length+' questions loaded from the Tap Trivia database.');return database}}throw new Error('Load the current Tap_Trivia_Question_Database.csv once on this browser to begin. No outside trivia service will be used.')})();try{return await loadingPromise}finally{loadingPromise=null}}
   function formatForGame(q){
+    if(q.type==='boolean'){
+      return {...q,options:['True','False'],question:'['+q.category+']\nTrue or False\n'+q.sourceQuestion};
+    }
     if(q.type==='multiple'&&q.options.length===4){
       const opts=shuffle(q.options);
       return {...q,options:opts,question:'['+q.category+']\nThis is a multiple choice question.\n'+q.sourceQuestion+'\n'+opts.map((opt,i)=>String.fromCharCode(65+i)+'. '+opt).join('\n')};
@@ -70,7 +74,7 @@
     return queue;
   }
   function updatePlayerDefaults(){const box=document.getElementById('nameFields');if(!box)return;[...box.querySelectorAll('input')].forEach((input,i)=>{if(input.dataset.tapTriviaDefaulted)return;input.value='Player '+(i+1);input.dataset.tapTriviaDefaulted='1'})}
-  global.TapTriviaQuestionEngine={version:3,databaseUrl:DATABASE_URL,categories:CATEGORIES,init,load,importFile,databaseSize:()=>database?database.length:0,cacheSize:()=>database?database.length:0};
+  global.TapTriviaQuestionEngine={version:4,databaseUrl:DATABASE_URL,categories:CATEGORIES,init,load,importFile,databaseSize:()=>database?database.length:0,cacheSize:()=>database?database.length:0};
   function boot(){updatePlayerDefaults();const box=document.getElementById('nameFields');if(box)new MutationObserver(updatePlayerDefaults).observe(box,{childList:true,subtree:true})}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })(window);
