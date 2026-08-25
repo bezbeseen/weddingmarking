@@ -1,4 +1,13 @@
   root.__miniQuestionsCompleted = 0;
+  root.__lastScorerIndex = null;
+
+  const miniOriginalCorrect = correct;
+  correct = function (i) {
+    const before = state.scores[i] || 0;
+    miniOriginalCorrect(i);
+    if ((state.scores[i] || 0) > before) root.__lastScorerIndex = i;
+  };
+
   const miniAdvanceQuestion = advanceQuestion;
   advanceQuestion = function () {
     miniAdvanceQuestion();
@@ -17,10 +26,12 @@
       avatar: avatars[index] || AVATARS[index % AVATARS.length],
       score: state.scores[index] || 0,
     })),
+    getLastScorerIndex: () => Number.isInteger(root.__lastScorerIndex) ? root.__lastScorerIndex : 0,
     addPoints: (index, points) => {
       if (index < 0 || index >= state.scores.length) return;
       snapshot();
       state.scores[index] = (state.scores[index] || 0) + points;
+      if (points > 0) root.__lastScorerIndex = index;
       if (state.scores[index] >= winTarget) {
         state.winner = { index };
         playWinSound();
@@ -31,7 +42,9 @@
     setScore: (index, value) => {
       if (index < 0 || index >= state.scores.length) return;
       snapshot();
+      const old = state.scores[index] || 0;
       state.scores[index] = value;
+      if (value > old) root.__lastScorerIndex = index;
       if (state.scores[index] >= winTarget) {
         state.winner = { index };
         playWinSound();
@@ -53,5 +66,6 @@
   if (miniResetButton) {
     miniResetButton.addEventListener("click", () => {
       root.__miniQuestionsCompleted = 0;
+      root.__lastScorerIndex = null;
     });
   }
