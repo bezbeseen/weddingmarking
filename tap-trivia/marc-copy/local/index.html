@@ -15,7 +15,6 @@
   try{
     let app=await get('app.html');
 
-    // Keep the known-good setup from commit 72735a3.
     app=app.replace(/<select id="playerCount">[\s\S]*?<\/select>/,'<select id="playerCount"><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select>');
     app=app.replace(/(<input id="winScore"[^>]*value=")[^"]*(")/,'$111$2');
     app=app.replace('<div class="name-fields"','<div class="setup-grid" style="margin-top:12px"><div class="setup-field"><label for="gameMode">Game mode</label><select id="gameMode"><option value="reader">Reader rotation</option><option value="host">Host mode</option></select></div><div class="setup-field"><label for="hostName">Host name</label><input id="hostName" type="text" maxlength="24" value="Host" disabled></div><div class="setup-field" style="grid-column:1/-1"><label for="dbUpload">Question database (optional CSV upload)</label><input id="dbUpload" type="file" accept=".csv,text/csv"><div id="dbStatus" style="font-size:13px;opacity:.72">Using the built-in question database.</div></div></div><div class="name-fields"');
@@ -54,8 +53,9 @@
 
     const assetNames=['questions-data-1.js','questions-data-2.js','questions-data-3.js','questions-data-4.js','questions-data-5.js','questions-data-6.js','questions-loader.js','sounds.js'];
     const assets=await Promise.all(assetNames.map(get));
-    const miniGameCode=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/210239c01e302d86e0fa32c5604ed2da20efbfae/tap-trivia/marc-copy/local/mini-games.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load mini games.');return r.text()});
-    const scripts=assets.map(x=>'<script>'+esc(x)+'<\/script>').join('\n')+'\n<script>'+esc(game)+'<\/script>\n<script>'+esc(miniGameCode)+'<\/script>';
+    const numericCatalogCode=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/9b8c82add4f8f254448c42940a953636b6944dfd/tap-trivia/marc-copy/local/numeric-catalog.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load numeric mini-game catalog.');return r.text()});
+    const miniGameCode=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/8ee0cb7dbfac3eb8ff41eed76a2fd42c6af7d779/tap-trivia/marc-copy/local/mini-games.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load mini games.');return r.text()});
+    const scripts=assets.map(x=>'<script>'+esc(x)+'<\/script>').join('\n')+'\n<script>'+esc(game)+'<\/script>\n<script>'+esc(numericCatalogCode)+'<\/script>\n<script>'+esc(miniGameCode)+'<\/script>';
     app=app.replace(/<\/div>\s*$/i,scripts+'</div>');
     document.open();document.write(app);document.close();
   }catch(err){document.body.innerHTML='<pre style="padding:20px;font-family:system-ui;white-space:pre-wrap">'+String(err&&err.stack||err)+'</pre>';}
