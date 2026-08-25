@@ -1,6 +1,33 @@
 (() => {
   'use strict';
 
+  const FALLBACK_QUESTIONS = [
+    {id:'hl-1',text:'In what year was the Declaration of Independence signed?',numericAnswer:1776},
+    {id:'hl-2',text:'How many feet are in one mile?',numericAnswer:5280},
+    {id:'hl-3',text:'How many minutes are in one day?',numericAnswer:1440},
+    {id:'hl-4',text:'In what year did the first Moon landing occur?',numericAnswer:1969},
+    {id:'hl-5',text:'How many bones are in the adult human body?',numericAnswer:206},
+    {id:'hl-6',text:'How many keys are on a standard piano?',numericAnswer:88},
+    {id:'hl-7',text:'How many cards are in a standard deck without jokers?',numericAnswer:52},
+    {id:'hl-8',text:'In what year did World War II end?',numericAnswer:1945},
+    {id:'hl-9',text:'How many degrees are in a full circle?',numericAnswer:360},
+    {id:'hl-10',text:'How many days are in a leap year?',numericAnswer:366},
+    {id:'hl-11',text:'In what year did the Titanic sink?',numericAnswer:1912},
+    {id:'hl-12',text:'How many senators are in the United States Senate?',numericAnswer:100},
+    {id:'hl-13',text:'How many squares are on a chessboard?',numericAnswer:64},
+    {id:'hl-14',text:'How many ounces are in a pound?',numericAnswer:16},
+    {id:'hl-15',text:'In what year did the Berlin Wall fall?',numericAnswer:1989},
+    {id:'hl-16',text:'How many elements are currently on the periodic table?',numericAnswer:118},
+    {id:'hl-17',text:'How many seats are in the U.S. House of Representatives?',numericAnswer:435},
+    {id:'hl-18',text:'In what year did the United States Constitution take effect?',numericAnswer:1789},
+    {id:'hl-19',text:'How many holes are played in a standard round of golf?',numericAnswer:18},
+    {id:'hl-20',text:'How many weeks are in a typical year?',numericAnswer:52},
+    {id:'hl-21',text:'In what year was the first Super Bowl played?',numericAnswer:1967},
+    {id:'hl-22',text:'How many points is a touchdown worth?',numericAnswer:6},
+    {id:'hl-23',text:'How many players from one team are on the court in basketball?',numericAnswer:5},
+    {id:'hl-24',text:'How many innings are in a regulation baseball game?',numericAnswer:9}
+  ];
+
   class BinaryScoringStrategy {
     score({ isCorrect }) { return isCorrect ? 1 : 0; }
   }
@@ -17,16 +44,16 @@
       return value;
     }
     generate(trueAnswer) {
-      if (!Number.isFinite(trueAnswer) || trueAnswer < 50) throw new Error('Invalid numeric answer.');
+      if (!Number.isFinite(trueAnswer) || trueAnswer <= 0) throw new Error('Invalid numeric answer.');
       const direction = this.sample() < 0.5 ? -1 : 1;
       const ratio = this.minimumOffsetRatio + this.sample() * (this.maximumOffsetRatio - this.minimumOffsetRatio);
       const integer = Number.isInteger(trueAnswer);
-      const rawOffset = trueAnswer * ratio;
+      const rawOffset = Math.max(trueAnswer * ratio, integer ? 1 : 0.01);
       const offset = integer ? Math.max(1, Math.round(rawOffset)) : rawOffset;
       let reference = trueAnswer + direction * offset;
-      if (!Number.isFinite(reference) || reference <= 0) reference = trueAnswer - offset;
+      if (!Number.isFinite(reference) || reference <= 0) reference = trueAnswer + offset;
       if (integer) reference = Math.round(reference);
-      if (reference === trueAnswer) reference = trueAnswer - (integer ? 1 : trueAnswer * 0.01);
+      if (reference === trueAnswer) reference = trueAnswer + (integer ? 1 : Math.max(trueAnswer * 0.01, 0.01));
       if (!Number.isFinite(reference) || reference <= 0 || reference === trueAnswer) throw new Error('Could not create reference number.');
       return reference;
     }
@@ -109,31 +136,7 @@
     if (document.getElementById('tapHigherLowerStyles')) return;
     const style = document.createElement('style');
     style.id = 'tapHigherLowerStyles';
-    style.textContent = `
-      #tapHigherLower{position:fixed;inset:0;z-index:240;background:#111214;color:#fff;overflow:auto;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
-      #tapHigherLower *{box-sizing:border-box}
-      #tapHigherLower .hl-wrap{max-width:980px;margin:0 auto;padding:28px 20px 48px}
-      #tapHigherLower .hl-kicker{text-transform:uppercase;letter-spacing:.15em;font-weight:900;opacity:.65}
-      #tapHigherLower h1{font-size:clamp(46px,8vw,78px);line-height:.95;margin:8px 0 12px}
-      #tapHigherLower .hl-sub{font-size:21px;font-weight:750;opacity:.78;margin-bottom:20px}
-      #tapHigherLower .hl-scoreboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:18px 0 24px}
-      #tapHigherLower .hl-player{background:#202226;border-radius:16px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:900}
-      #tapHigherLower .hl-player.current{outline:3px solid #fff}
-      #tapHigherLower .hl-name{display:flex;align-items:center;gap:8px;min-width:0}.hl-name span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-      #tapHigherLower .hl-score{font-size:24px}
-      #tapHigherLower .hl-card{background:#202226;border-radius:24px;padding:24px;margin:16px 0}
-      #tapHigherLower .hl-label{text-transform:uppercase;letter-spacing:.1em;font-size:14px;font-weight:900;opacity:.62}
-      #tapHigherLower .hl-question{font-size:clamp(28px,5vw,46px);font-weight:900;line-height:1.1;margin:10px 0 16px}
-      #tapHigherLower .hl-reference{font-size:clamp(54px,10vw,90px);font-weight:950;margin:8px 0}
-      #tapHigherLower .hl-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
-      #tapHigherLower button{border:0;border-radius:18px;min-height:82px;padding:14px 18px;font-size:28px;font-weight:950;cursor:pointer}
-      #tapHigherLower .hl-choice,#tapHigherLower .hl-primary{background:#fff;color:#111}
-      #tapHigherLower .hl-primary{width:100%;margin-top:18px;font-size:22px;min-height:68px}
-      #tapHigherLower .hl-result{font-size:clamp(36px,7vw,64px);font-weight:950;margin:8px 0}
-      #tapHigherLower .hl-comparison{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;text-align:center;margin-top:18px}
-      #tapHigherLower .hl-comparison strong{display:block;font-size:clamp(34px,6vw,58px)}
-      #tapHigherLower .hl-note{font-size:18px;opacity:.78}
-      @media(max-width:620px){#tapHigherLower .hl-grid{grid-template-columns:1fr}#tapHigherLower .hl-comparison{grid-template-columns:1fr}.hl-arrow{transform:rotate(90deg)}}`;
+    style.textContent = `#tapHigherLower{position:fixed;inset:0;z-index:240;background:#111214;color:#fff;overflow:auto;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}#tapHigherLower *{box-sizing:border-box}#tapHigherLower .hl-wrap{max-width:980px;margin:0 auto;padding:28px 20px 48px}#tapHigherLower .hl-kicker{text-transform:uppercase;letter-spacing:.15em;font-weight:900;opacity:.65}#tapHigherLower h1{font-size:clamp(46px,8vw,78px);line-height:.95;margin:8px 0 12px}#tapHigherLower .hl-sub{font-size:21px;font-weight:750;opacity:.78;margin-bottom:20px}#tapHigherLower .hl-scoreboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:18px 0 24px}#tapHigherLower .hl-player{background:#202226;border-radius:16px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:900}#tapHigherLower .hl-player.current{outline:3px solid #fff}#tapHigherLower .hl-name{display:flex;align-items:center;gap:8px;min-width:0}#tapHigherLower .hl-name span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#tapHigherLower .hl-score{font-size:24px}#tapHigherLower .hl-card{background:#202226;border-radius:24px;padding:24px;margin:16px 0}#tapHigherLower .hl-label{text-transform:uppercase;letter-spacing:.1em;font-size:14px;font-weight:900;opacity:.62}#tapHigherLower .hl-question{font-size:clamp(28px,5vw,46px);font-weight:900;line-height:1.1;margin:10px 0 16px}#tapHigherLower .hl-reference{font-size:clamp(54px,10vw,90px);font-weight:950;margin:8px 0}#tapHigherLower .hl-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}#tapHigherLower button{border:0;border-radius:18px;min-height:82px;padding:14px 18px;font-size:28px;font-weight:950;cursor:pointer}#tapHigherLower .hl-choice,#tapHigherLower .hl-primary{background:#fff;color:#111}#tapHigherLower .hl-primary{width:100%;margin-top:18px;font-size:22px;min-height:68px}#tapHigherLower .hl-result{font-size:clamp(36px,7vw,64px);font-weight:950;margin:8px 0}#tapHigherLower .hl-comparison{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;text-align:center;margin-top:18px}#tapHigherLower .hl-comparison strong{display:block;font-size:clamp(34px,6vw,58px)}#tapHigherLower .hl-note{font-size:18px;opacity:.78}@media(max-width:620px){#tapHigherLower .hl-grid{grid-template-columns:1fr}#tapHigherLower .hl-comparison{grid-template-columns:1fr}.hl-arrow{transform:rotate(90deg)}}`;
     document.head.appendChild(style);
   }
 
@@ -149,11 +152,13 @@
   }
 
   async function loadQuestions() {
-    if (window.TAP_MINI_NUMERIC_CATALOG_READY) await window.TAP_MINI_NUMERIC_CATALOG_READY;
-    const raw = Array.isArray(window.TAP_MINI_NUMERIC_CATALOG) ? window.TAP_MINI_NUMERIC_CATALOG : [];
-    return raw
-      .map(item => ({ id: String(item.id || ''), text: String(item.q || ''), numericAnswer: Number(item.v) }))
-      .filter(q => q.id && q.text && Number.isFinite(q.numericAnswer) && q.numericAnswer >= 50);
+    try {
+      if (window.TAP_MINI_NUMERIC_CATALOG_READY) await window.TAP_MINI_NUMERIC_CATALOG_READY;
+      const raw = Array.isArray(window.TAP_MINI_NUMERIC_CATALOG) ? window.TAP_MINI_NUMERIC_CATALOG : [];
+      const loaded = raw.map(item => ({ id: String(item.id || ''), text: String(item.q || ''), numericAnswer: Number(item.v) })).filter(q => q.id && q.text && Number.isFinite(q.numericAnswer) && q.numericAnswer > 0);
+      if (loaded.length) return loaded;
+    } catch (_) {}
+    return FALLBACK_QUESTIONS.slice();
   }
 
   function rotateFromStarter(players, starterIndex) {
@@ -178,10 +183,7 @@
 
     function scoreboardMarkup(currentHostIndex) {
       const live = currentLiveScores();
-      return `<div class="hl-scoreboard">${orderedPlayers.map(p => {
-        const now = live.get(p.index) || p;
-        return `<div class="hl-player${p.index === currentHostIndex ? ' current' : ''}"><div class="hl-name"><span>${esc(now.avatar || '')}</span><span>${esc(now.name)}</span></div><strong class="hl-score">${Number(now.score || 0)}</strong></div>`;
-      }).join('')}</div>`;
+      return `<div class="hl-scoreboard">${orderedPlayers.map(p => { const now = live.get(p.index) || p; return `<div class="hl-player${p.index === currentHostIndex ? ' current' : ''}"><div class="hl-name"><span>${esc(now.avatar || '')}</span><span>${esc(now.name)}</span></div><strong class="hl-score">${Number(now.score || 0)}</strong></div>`; }).join('')}</div>`;
     }
 
     function render() {
