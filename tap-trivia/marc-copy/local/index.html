@@ -8,54 +8,57 @@
 <body style="margin:0">
 <script>
 (async()=>{
-  const rollback='https://raw.githubusercontent.com/bezbeseen/weddingmarking/72735a3d769cb0731bfb1ab1f95ec18c04d59a27/tap-trivia/marc-copy/local/index.html';
-  const miniUrl='https://raw.githubusercontent.com/bezbeseen/weddingmarking/210239c01e302d86e0fa32c5604ed2da20efbfae/tap-trivia/marc-copy/local/mini-games.js';
+  const base='https://raw.githubusercontent.com/bezbeseen/taptrivia/087be1202bcc2f646c6e26e9bfac02a5bb89d1a9/local/';
+  const get=async name=>fetch(base+name,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load '+name);return r.text()});
+  const esc=s=>s.replace(/<\/script/gi,'<\\/script');
+  const replace=(src,from,to,label)=>{if(!src.includes(from))throw new Error('Patch failed: '+label);return src.replace(from,to)};
   try{
-    let html=await fetch(rollback,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load rolled-back game.');return r.text()});
+    let app=await get('app.html');
 
-    const insertion=`
-    game=game.replace('  let persistentQuestionIndex = 0;','  let persistentQuestionIndex = 0;\\n  let completedQuestions = 0;');
-    game=game.replace('    resetQuestionFlags();\\n  }\\n\\n  function snapshot()','    resetQuestionFlags();\\n    completedQuestions += 1;\\n    if (completedQuestions % 3 === 0 && !state.winner) setTimeout(() => root.__launchMiniGame && root.__launchMiniGame(), 0);\\n  }\\n\\n  function snapshot()');
-    game=game.replace('      state = emptyState(count);\\n      history = [];','      state = emptyState(count);\\n      history = [];\\n      completedQuestions = 0;');
-    game=game.replace('  buildNameFields();\\n  updateDefaultWinScore();\\n  render();',\`  root.__miniGameAPI = {
-    getPlayers: () => names.map((name, index) => ({ index, name, avatar: avatars[index] || AVATARS[index % AVATARS.length], score: state.scores[index] || 0 })),
-    addPoints: (index, points) => {
-      if (index < 0 || index >= state.scores.length) return;
-      state.scores[index] = (state.scores[index] || 0) + points;
-      if (state.scores[index] >= winTarget) { state.winner = { index }; playWinSound(); status.textContent = names[index] + " wins from the mini game!"; }
-      render();
-    },
-    setScore: (index, value) => {
-      if (index < 0 || index >= state.scores.length) return;
-      state.scores[index] = value;
-      if (state.scores[index] >= winTarget) { state.winner = { index }; playWinSound(); status.textContent = names[index] + " wins from the mini game!"; }
-      render();
-    },
-    getLeaderScore: () => state.scores.length ? Math.max(...state.scores) : 0,
-    getLastPlaceIndexes: () => {
-      if (!state.scores.length) return [];
-      const low = Math.min(...state.scores);
-      return state.scores.map((score, index) => score === low ? index : -1).filter(index => index >= 0);
-    }
-  };
-  buildNameFields();
-  updateDefaultWinScore();
-  render();\`);
-    const miniGameCode=await fetch('${miniUrl}',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load mini games.');return r.text()});
-`;
+    // Keep the known-good setup from commit 72735a3.
+    app=app.replace(/<select id="playerCount">[\s\S]*?<\/select>/,'<select id="playerCount"><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select>');
+    app=app.replace(/(<input id="winScore"[^>]*value=")[^"]*(")/,'$111$2');
+    app=app.replace('<div class="name-fields"','<div class="setup-grid" style="margin-top:12px"><div class="setup-field"><label for="gameMode">Game mode</label><select id="gameMode"><option value="reader">Reader rotation</option><option value="host">Host mode</option></select></div><div class="setup-field"><label for="hostName">Host name</label><input id="hostName" type="text" maxlength="24" value="Host" disabled></div><div class="setup-field" style="grid-column:1/-1"><label for="dbUpload">Question database (optional CSV upload)</label><input id="dbUpload" type="file" accept=".csv,text/csv"><div id="dbStatus" style="font-size:13px;opacity:.72">Using the built-in question database.</div></div></div><div class="name-fields"');
+    app=app.replace('</style>','\n#slap15 .setup-player .avatar-pick{display:grid!important;justify-items:center!important;align-content:center!important;min-width:86px!important;min-height:92px!important;padding:8px!important;border:2px solid light-dark(#d8d8d2,#444)!important;border-radius:16px!important;background:light-dark(#f7f7f3,#202226)!important;color:inherit!important;opacity:1!important}\n#slap15 .setup-player .avatar-pick .avatar-emoji{display:block!important;font-size:46px!important;line-height:1!important;margin-bottom:5px!important}\n#slap15 .avatar-btn{display:grid!important;justify-items:center!important;margin:0 auto 6px!important;background:transparent!important;color:inherit!important;opacity:1!important}\n#slap15 .avatar-btn .avatar-emoji{display:block!important;font-size:52px!important;line-height:1!important}\n</style>');
 
-    html=html.replace('    const assetNames=[', insertion+'\n    const assetNames=[');
-    html=html.replace(
-      "    const scripts=assets.map(x=>'<script>'+esc(x)+'<\\/script>').join('\\n')+'\\n<script>'+esc(game)+'<\\/script>';",
-      "    const scripts=assets.map(x=>'<script>'+esc(x)+'<\\/script>').join('\\n')+'\\n<script>'+esc(game)+'<\\/script>\\n<script>'+esc(miniGameCode)+'<\\/script>';"
-    );
+    let game=await get('game.js');
+    game=replace(game,'  let winTarget = 15;','  let winTarget = 15;\n  let hostMode = false;\n  let hostName = "Host";\n  let uploadedBanks = null;','state vars');
+    game=replace(game,'  const winScore = root.querySelector("#winScore");','  const winScore = root.querySelector("#winScore");\n  const gameMode = root.querySelector("#gameMode");\n  const hostNameInput = root.querySelector("#hostName");\n  const dbUpload = root.querySelector("#dbUpload");\n  const dbStatus = root.querySelector("#dbStatus");','setup controls');
+    game=game.replaceAll('Math.max(3, Math.min(8, Number(playerCount.value) || 3))','Math.max(2, Math.min(6, Number(playerCount.value) || 3))');
+    game=game.replace('"</span><span>Tap to change</span>"','"</span><span>Choose avatar</span>"');
+    game=replace(game,'        ? names[state.reader] +\n          " is reading • "','        ? (hostMode ? hostName + " is hosting • " : names[state.reader] + " is reading • ")','question meta');
+    game=replace(game,'        if (i === state.reader) return;','        if (!hostMode && i === state.reader) return;','mc host eligibility');
+    game=replace(game,'          : roundResult.kind === "correct" && names.length\n            ? names[(state.reader + 1) % names.length] + " reads next"','          : roundResult.kind === "correct" && names.length\n            ? (hostMode ? hostName + " hosts the next question" : names[(state.reader + 1) % names.length] + " reads next")','result reader');
+    game=replace(game,'      (roundResult.kind === "mc-correct" ? "Reader sits out" : "Tap to continue")','      (roundResult.kind === "mc-correct" ? (hostMode ? "Everyone can score" : "Reader sits out") : "Tap to continue")','result host label');
+    game=replace(game,'      advanceQuestion();\n      state.reader = (state.reader + 1) % names.length;\n      status.textContent = names[state.reader] + " reads. Press Show Question.";','      advanceQuestion();\n      if (!hostMode) state.reader = (state.reader + 1) % names.length;\n      status.textContent = hostMode ? hostName + " hosts. Press Show Question." : names[state.reader] + " reads. Press Show Question.";','correct advance');
+    game=replace(game,'      readerLabel.textContent = names[state.reader];','      readerLabel.textContent = hostMode ? hostName : names[state.reader];','host banner name');
+    game=replace(game,'      if (turnAvatar) turnAvatar.textContent = avatars[state.reader] || AVATARS[state.reader % AVATARS.length];','      if (turnAvatar) turnAvatar.textContent = hostMode ? "🎤" : (avatars[state.reader] || AVATARS[state.reader % AVATARS.length]);','host avatar');
+    game=replace(game,'      if (turnKicker) turnKicker.textContent = state.winner ? "Winner" : "Now reading";','      if (turnKicker) turnKicker.textContent = state.winner ? "Winner" : (hostMode ? "Host" : "Now reading");','host kicker');
+    game=replace(game,'                : "Everyone else slaps in after the question is read.";','                : (hostMode ? "All players may slap in after the host reads the question." : "Everyone else slaps in after the question is read.");','host hint');
+    game=replace(game,'      const nxt = names[(state.reader + 1) % names.length];\n      nextReaderBtn.innerHTML = \'Next reader<span class="btn-sub">\' + nxt + "\'s turn</span>";','      const nxt = names[(state.reader + 1) % names.length];\n      nextReaderBtn.innerHTML = hostMode ? \'Next question<span class="btn-sub">Host continues</span>\' : \'Next reader<span class="btn-sub">\' + nxt + "\'s turn</span>";','next button');
+    game=replace(game,'      const isReader = i === state.reader;','      const isReader = !hostMode && i === state.reader;','player eligibility');
+    game=replace(game,'    if (i === state.reader || state.winner) return;','    if ((!hostMode && i === state.reader) || state.winner) return;','correct eligibility');
+    game=replace(game,'    if (i === state.reader || state.winner || roundResult) return;','    if ((!hostMode && i === state.reader) || state.winner || roundResult) return;','wrong eligibility');
+    game=replace(game,'    const competitors = names.map((_, idx) => idx).filter((idx) => idx !== state.reader);','    const competitors = names.map((_, idx) => idx).filter((idx) => hostMode || idx !== state.reader);','stumped eligibility');
+    game=replace(game,'      continueLabel: won ? "New game" : "Next reader",','      continueLabel: won ? "New game" : (hostMode ? "Next question" : "Next reader"),','correct continue label');
 
-    document.open();
-    document.write(html);
-    document.close();
-  }catch(err){
-    document.body.innerHTML='<pre style="padding:20px;font-family:system-ui;white-space:pre-wrap">'+String(err&&err.stack||err)+'</pre>';
-  }
+    game=replace(game,'  levelSelect.addEventListener("change", playUiTap);','  const defaultWinScore = {2:15,3:11,4:9,5:8,6:7};\n  const updateDefaultWinScore = () => { winScore.value = defaultWinScore[Number(playerCount.value)] || 11; };\n\n  function parseCsv(text) {\n    const rows=[]; let row=[], cell="", quoted=false;\n    for(let i=0;i<text.length;i++){const ch=text[i]; if(quoted){if(ch===\"\\\"\"&&text[i+1]===\"\\\"\"){cell+=\"\\\"\";i++;}else if(ch===\"\\\"\")quoted=false;else cell+=ch;}else if(ch===\"\\\"\")quoted=true;else if(ch===\",\"){row.push(cell);cell=\"\";}else if(ch===\"\\n\"){row.push(cell.replace(/\\r$/,\"\"));rows.push(row);row=[];cell=\"\";}else cell+=ch;}\n    if(cell.length||row.length){row.push(cell.replace(/\\r$/,\"\"));rows.push(row);}\n    if(rows.length<2) throw new Error(\"CSV has no question rows.\");\n    const headers=rows[0].map(h=>h.trim().toLowerCase());\n    const val=(r,names)=>{for(const n of names){const x=headers.indexOf(n);if(x>=0&&r[x]!=null)return String(r[x]).trim();}return \"\";};\n    const banks={easy:[],medium:[],hard:[],smart:[],mix:[]};\n    let order=0;\n    for(const r of rows.slice(1)){const question=val(r,[\"question\"]);const answerText=val(r,[\"answers\",\"answer\"]);if(!question||!answerText)continue;let d=val(r,[\"difficulty\"]).toLowerCase();if(d===\"medium-hard\")d=\"hard\";if(![\"easy\",\"medium\",\"hard\",\"smart\"].includes(d))d=\"medium\";const category=val(r,[\"assigned_category\",\"category\"])||\"General Knowledge\";const opts=[\"option_a\",\"option_b\",\"option_c\",\"option_d\"].map(n=>val(r,[n])).filter(x=>x&&x.toLowerCase()!==answerText.toLowerCase());const q={question,answer:answerText,difficulty:d,order:++order,category,distractors:opts};banks[d].push(q);banks.mix.push({...q,difficulty:\"mix\"});}\n    if(!banks.mix.length)throw new Error(\"No usable questions found. Required columns: question and answers/answer.\");\n    return banks;\n  }\n\n  if (gameMode) gameMode.addEventListener("change", () => { playUiTap(); hostNameInput.disabled = gameMode.value !== "host"; });\n  if (dbUpload) dbUpload.addEventListener("change", async () => {\n    const file=dbUpload.files&&dbUpload.files[0];\n    if(!file){uploadedBanks=null;dbStatus.textContent=\"Using the built-in question database.\";return;}\n    try{uploadedBanks=parseCsv(await file.text());dbStatus.textContent=\"Loaded \"+uploadedBanks.mix.length.toLocaleString()+\" questions from \"+file.name+\".\";}catch(err){uploadedBanks=null;dbStatus.textContent=err.message||\"Could not load database.\";playErrorSound();}\n  });\n\n  levelSelect.addEventListener("change", playUiTap);','upload + defaults');
+    game=replace(game,'    playUiTap();\n    buildNameFields();\n  });','    playUiTap();\n    buildNameFields();\n    updateDefaultWinScore();\n  });','player defaults');
+    game=replace(game,'    const level = levelSelect.value;','    const level = levelSelect.value;\n    hostMode = !!gameMode && gameMode.value === "host";\n    hostName = hostNameInput && hostNameInput.value.trim() ? hostNameInput.value.trim() : "Host";','start host mode');
+    game=replace(game,'      const banks = root.__loadQuestionBanks\n        ? await root.__loadQuestionBanks(level)\n        : root.__questionBanks;','      const banks = uploadedBanks || (root.__loadQuestionBanks\n        ? await root.__loadQuestionBanks(level)\n        : root.__questionBanks);','uploaded banks');
+    game=replace(game,'      status.textContent = names[0] + " reads first.";','      status.textContent = hostMode ? hostName + " hosts the first question." : names[0] + " reads first.";','start status');
+    game=replace(game,'    advanceQuestion();\n    state.reader = (state.reader + 1) % names.length;\n    status.textContent = names[state.reader] + " reads. Everyone else may compete.";','    advanceQuestion();\n    if (!hostMode) state.reader = (state.reader + 1) % names.length;\n    status.textContent = hostMode ? hostName + " hosts the next question. All players may compete." : names[state.reader] + " reads. Everyone else may compete.";','manual next');
+
+    const miniHook=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/3e1ec156404b2308211625a35ae27e653740dbe6/tap-trivia/marc-copy/local/mini-api-inject.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load mini integration.');return r.text()});
+    game=replace(game,'  buildNameFields();\n  render();',miniHook+'\n  buildNameFields();\n  updateDefaultWinScore();\n  render();','mini hook');
+
+    const assetNames=['questions-data-1.js','questions-data-2.js','questions-data-3.js','questions-data-4.js','questions-data-5.js','questions-data-6.js','questions-loader.js','sounds.js'];
+    const assets=await Promise.all(assetNames.map(get));
+    const miniGameCode=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/210239c01e302d86e0fa32c5604ed2da20efbfae/tap-trivia/marc-copy/local/mini-games.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load mini games.');return r.text()});
+    const scripts=assets.map(x=>'<script>'+esc(x)+'<\/script>').join('\n')+'\n<script>'+esc(game)+'<\/script>\n<script>'+esc(miniGameCode)+'<\/script>';
+    app=app.replace(/<\/div>\s*$/i,scripts+'</div>');
+    document.open();document.write(app);document.close();
+  }catch(err){document.body.innerHTML='<pre style="padding:20px;font-family:system-ui;white-space:pre-wrap">'+String(err&&err.stack||err)+'</pre>';}
 })();
 </script>
 </body>
