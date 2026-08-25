@@ -8,26 +8,9 @@
     const source='https://raw.githubusercontent.com/bezbeseen/weddingmarking/902eb8909f7290f4d205588dd82193d6f905a490/tap-trivia/marc-copy/local/index.html';
     let html=await fetch(source,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load Tap Trivia.');return r.text()});
     html=html.replace('3e1ec156404b2308211625a35ae27e653740dbe6','bc4588b7495749bcfbdb051c4573764e3096e949');
-    html=html.replace('8ee0cb7dbfac3eb8ff41eed76a2fd42c6af7d779','59379d36515648b44336ef21494977684b2897de');
-
-    document.open();
-    document.write(html);
-    document.close();
-
-    const loadScript = src => new Promise((resolve,reject)=>{
-      const s=document.createElement('script');
-      s.src=src;
-      s.async=false;
-      s.onload=resolve;
-      s.onerror=()=>reject(new Error('Could not load '+src));
-      document.body.appendChild(s);
-    });
-
-    await loadScript('https://raw.githubusercontent.com/bezbeseen/weddingmarking/98a9b441a4e8e8f503bc129d5c4c2d1a90435099/tap-trivia/marc-copy/local/higher-lower-plugin.js');
-    await loadScript('https://raw.githubusercontent.com/bezbeseen/weddingmarking/5b97712aacc60b3328345646275fa0e041282e74/tap-trivia/marc-copy/local/higher-lower-host-integration.js');
-  }catch(err){
-    document.body.innerHTML='<pre style="padding:20px;font-family:system-ui;white-space:pre-wrap">'+String(err&&err.stack||err)+'</pre>';
-  }
+    html=html.replace('8ee0cb7dbfac3eb8ff41eed76a2fd42c6af7d779','3e289771da845d73865e25fe1acf092d32306e71');
+    document.open();document.write(html);document.close();
+  }catch(err){document.body.innerHTML='<pre style="padding:20px;font-family:system-ui;white-space:pre-wrap">'+String(err&&err.stack||err)+'</pre>';}
 })();
 </script>
 </body>
