@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>SLAP 15 — Marc Local Build</title>
+</head>
+<body style="margin:0">
+<script>
+(async()=>{
+  const source='https://raw.githubusercontent.com/bezbeseen/taptrivia/087be1202bcc2f646c6e26e9bfac02a5bb89d1a9/local/slap-15.html';
+  try{
+    const html=await fetch(source,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load the pinned Marc local build.');return r.text()});
+    document.open();
+    document.write(html);
+    document.close();
+  }catch(err){
+    document.body.innerHTML='<pre style="padding:20px;font-family:system-ui">'+String(err&&err.message||err)+'</pre>';
+  }
+})();
+</script>
+</body>
+</html>
