@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Tap Trivia — Marc Snapshot</title>
+</head>
+<body style="margin:0">
+<script>
+(async()=>{
+  const base='https://raw.githubusercontent.com/bezbeseen/taptrivia/087be1202bcc2f646c6e26e9bfac02a5bb89d1a9/local/';
+  try{
+    let app=await fetch(base+'app.html').then(r=>{if(!r.ok)throw new Error('Could not load the Marc Tap Trivia snapshot.');return r.text()});
+    const scripts=`
+<script src="${base}questions-data-1.js"><\/script>
+<script src="${base}questions-data-2.js"><\/script>
+<script src="${base}questions-data-3.js"><\/script>
+<script src="${base}questions-data-4.js"><\/script>
+<script src="${base}questions-data-5.js"><\/script>
+<script src="${base}questions-data-6.js"><\/script>
+<script src="${base}questions-loader.js"><\/script>
+<script src="${base}sounds.js"><\/script>
+<script src="${base}game.js"><\/script>
+`;
+    app=app.replace(/<\/div>\s*$/i,scripts+'</div>');
+    document.open();
+    document.write(app);
+    document.close();
+  }catch(err){
+    document.body.innerHTML='<pre style="padding:20px;font-family:system-ui">'+String(err&&err.message||err)+'</pre>';
+  }
+})();
+</script>
+</body>
+</html>
