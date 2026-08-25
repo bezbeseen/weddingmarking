@@ -31,13 +31,18 @@
   }
   function close(){ overlay?.classList.remove('show'); }
   function players(){ return api()?.getPlayers?.() || []; }
-  function orderedFromLastScorer(){
+  function rotateFromIndex(wanted){
     const ps=players();
     if(!ps.length) return [];
-    const wanted=api()?.getLastScorerIndex?.();
     const pos=ps.findIndex(p=>p.index===wanted);
     const start=pos>=0?pos:0;
     return ps.slice(start).concat(ps.slice(0,start));
+  }
+  function orderedFromLastScorer(){
+    return rotateFromIndex(api()?.getLastScorerIndex?.());
+  }
+  function orderedFromFirstPlace(){
+    return rotateFromIndex(api()?.getFirstPlaceStarterIndex?.());
   }
 
   function getNextNumericQuestion(currentAnswer, bank, usedIds) {
@@ -55,10 +60,10 @@
   }
 
   function higherLower(){
-    const ordered=orderedFromLastScorer();
+    const ordered=orderedFromFirstPlace();
     if(!ordered.length) return;
     const starter=ordered[0];
-    shell('Higher / Lower',`${starter.name} received the last point and starts the challenge.`,`<div class="mg-player">${esc(starter.avatar)} ${esc(starter.name)}</div><button class="primary" id="mgStartChallenge">Start the challenge</button>`);
+    shell('Higher / Lower',`${starter.name} is first and starts the challenge. If first place is tied, the player who held first before the tie keeps the starting spot.`,`<div class="mg-player">${esc(starter.avatar)} ${esc(starter.name)}</div><button class="primary" id="mgStartChallenge">Start the challenge</button>`);
     overlay.querySelector('#mgStartChallenge').onclick=()=>runHigherLower(ordered);
   }
 
@@ -77,7 +82,7 @@
 
     function showTurn(){
       if(turn>=ps.length){
-        shell('Higher / Lower complete','Everybody had one turn.',`<div class="mg-result">Back to the main game.</div><button class="primary" id="mgDone">Back to trivia</button>`);
+        shell('Higher / Lower complete','Every player answered exactly one question this round.',`<div class="mg-result">Back to the main game.</div><button class="primary" id="mgDone">Back to trivia</button>`);
         overlay.querySelector('#mgDone').onclick=close;
         return;
       }
@@ -89,13 +94,17 @@
         return;
       }
       used.add(next.id);
-      shell('Higher / Lower',`${player.name}'s turn. Correct answer earns +1 point.`,`<div class="mg-progress">Player ${turn+1} of ${ps.length}</div><div class="mg-player">${esc(player.avatar)} ${esc(player.name)}</div><div class="mg-card"><div class="mg-big">Previous answer</div><div class="mg-sub">${esc(current.q)}</div><div class="mg-value">${Number(current.v).toLocaleString()}</div></div><div class="mg-card"><div class="mg-big">${esc(next.q)}</div><div class="mg-sub">Is the answer higher or lower than ${Number(current.v).toLocaleString()}?</div><div class="mg-grid"><button class="primary" id="mgHigher">Higher</button><button class="primary" id="mgLower">Lower</button></div></div>`);
+      shell('Higher / Lower',`${player.name}'s question. Correct answer earns +1 point.`,`<div class="mg-progress">Question ${turn+1} of ${ps.length}</div><div class="mg-player">${esc(player.avatar)} ${esc(player.name)}</div><div class="mg-card"><div class="mg-big">Previous answer</div><div class="mg-sub">${esc(current.q)}</div><div class="mg-value">${Number(current.v).toLocaleString()}</div></div><div class="mg-card"><div class="mg-big">${esc(next.q)}</div><div class="mg-sub">Is the answer higher or lower than ${Number(current.v).toLocaleString()}?</div><div class="mg-grid"><button class="primary" id="mgHigher">Higher</button><button class="primary" id="mgLower">Lower</button></div></div>`);
       const resolve=guess=>{
         const direction=Number(next.v)>Number(current.v)?'higher':'lower';
         const won=guess===direction;
         if(won)api().addPoints(player.index,1);
-        shell(won?'Correct!':'Not this time',`${next.q} — ${Number(next.v).toLocaleString()}`,`<div class="mg-result">${won?`${esc(player.name)} +1 point`:`${esc(player.name)} scores 0`}</div><button class="primary" id="mgNext">${turn+1<ps.length?'Next player':'Finish'}</button>`);
-        overlay.querySelector('#mgNext').onclick=()=>{current=next;turn+=1;showTurn();};
+        shell(won?'Correct!':'Not this time',`${next.q} — ${Number(next.v).toLocaleString()}`,`<div class="mg-result">${won?`${esc(player.name)} +1 point`:`${esc(player.name)} scores 0`}</div><button class="primary" id="mgNext">${turn+1<ps.length?'Next player':'Finish round'}</button>`);
+        overlay.querySelector('#mgNext').onclick=()=>{
+          current=next;
+          turn+=1;
+          showTurn();
+        };
       };
       overlay.querySelector('#mgHigher').onclick=()=>resolve('higher');
       overlay.querySelector('#mgLower').onclick=()=>resolve('lower');
