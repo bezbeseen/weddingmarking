@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tap Trivia — Higher / Lower</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#111214;color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.wrap{max-width:980px;margin:0 auto;padding:28px 20px 48px}.kicker{font-weight:900;letter-spacing:.16em;text-transform:uppercase;opacity:.68}.title{font-size:clamp(50px,9vw,90px);font-weight:950;line-height:.92;margin:8px 0 14px}.sub{font-size:21px;font-weight:750;opacity:.78;max-width:850px}.card{background:#202226;border-radius:24px;padding:24px;margin-top:20px}.label{font-size:14px;text-transform:uppercase;letter-spacing:.12em;font-weight:900;opacity:.58}.question{font-size:clamp(28px,5vw,48px);font-weight:900;line-height:1.1;margin-top:8px}.number{font-size:clamp(48px,10vw,88px);font-weight:950;margin-top:12px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}button{border:0;border-radius:18px;min-height:76px;padding:14px 18px;font-size:24px;font-weight:950;cursor:pointer}.higher{background:#fff;color:#111}.lower{background:#fff;color:#111}.equal{background:#f2c94c;color:#111}.primary{background:#fff;color:#111;width:100%;margin-top:18px}.result{font-size:34px;font-weight:950;margin-top:18px}.player{font-size:28px;font-weight:950;margin-top:10px}.small{font-size:16px;opacity:.72;margin-top:10px}.setup{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:18px}input{width:100%;min-height:54px;border:0;border-radius:14px;padding:10px 12px;font-size:19px;font-weight:800;color:#111;background:#fff}.hidden{display:none!important}@media(max-width:650px){.grid{grid-template-columns:1fr}.wrap{padding:20px 14px 40px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kicker">Tap Trivia Mini Game</div>
+  <div class="title">Higher / Lower</div>
+  <div id="screen"></div>
+</div>
+<script src="../../marc-copy/local/numeric-catalog.js"></script>
+<script>
+(() => {
+  const screen=document.getElementById('screen');
+  let bank=[];
+  let players=[];
+  let playerIndex=0;
+  let reference=null;
+  let challenge=null;
+  let used=new Set();
+  let scores=[];
+
+  const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  async function loadBank(){
+    if(window.TAP_MINI_NUMERIC_CATALOG_READY){try{await window.TAP_MINI_NUMERIC_CATALOG_READY;}catch(_){}}
+    bank=(window.TAP_MINI_NUMERIC_CATALOG||[]).filter(x=>Number.isFinite(Number(x.v))&&Number(x.v)>=50);
+  }
+
+  function setup(){
+    screen.innerHTML=`<div class="sub">Standalone prototype. The first name entered is the first player to go. Each player compares a new numeric trivia answer to the previously revealed number.</div>
+      <div class="card"><div class="label">Players</div><div class="setup">
+        <input id="p1" value="Player 1"><input id="p2" value="Player 2"><input id="p3" value="Player 3"><input id="p4" placeholder="Player 4 (optional)"><input id="p5" placeholder="Player 5 (optional)"><input id="p6" placeholder="Player 6 (optional)">
+      </div><button class="primary" id="start">Start the challenge</button></div>`;
+    screen.querySelector('#start').onclick=async()=>{
+      await loadBank();
+      if(!bank.length){screen.innerHTML='<div class="card"><div class="result">Numeric catalog could not load.</div></div>';return;}
+      players=[1,2,3,4,5,6].map(i=>screen.querySelector('#p'+i).value.trim()).filter(Boolean);
+      if(!players.length)players=['Player 1'];
+      scores=players.map(()=>0);
+      playerIndex=0;used=new Set();
+      startNewReference();
+    };
+  }
+
+  function pickRandomUnused(){
+    const avail=bank.filter(q=>!used.has(q.id));
+    if(!avail.length){used.clear();return pickRandomUnused();}
+    const q=avail[Math.floor(Math.random()*avail.length)];used.add(q.id);return q;
+  }
+
+  function nextRelative(current){
+    const value=Math.max(Number(current)||1,1);
+    let avail=bank.filter(q=>!used.has(q.id)&&Number(q.v)!==Number(current));
+    if(!avail.length){used.clear();avail=bank.filter(q=>Number(q.v)!==Number(current));}
+    const ranked=avail.map(q=>({q,d:Math.abs(Math.log10(Math.max(Number(q.v),1))-Math.log10(value))})).sort((a,b)=>a.d-b.d);
+    const top=ranked.slice(0,10);
+    if(!top.length)return null;
+    const chosen=top[Math.floor(Math.random()*top.length)].q;used.add(chosen.id);return chosen;
+  }
+
+  function startNewReference(){
+    reference=pickRandomUnused();
+    challenge=nextRelative(reference.v);
+    renderTurn(true);
+  }
+
+  function renderTurn(isFreshReference=false){
+    const name=players[playerIndex];
+    if(!challenge)challenge=nextRelative(reference.v);
+    screen.innerHTML=`<div class="sub">${isFreshReference?'New reference number. ':''}${esc(name)} is up.</div>
+      <div class="card"><div class="label">Reference question</div><div class="question">${esc(reference.q)}</div><div class="number">${Number(reference.v).toLocaleString()}</div></div>
+      <div class="card"><div class="label">${esc(name)} — choose one</div><div class="question">${esc(challenge.q)}</div><div class="small">Is this answer higher, lower, or exactly equal to ${Number(reference.v).toLocaleString()}?</div>
+        <div class="grid"><button class="higher" data-pick="higher">Higher</button><button class="lower" data-pick="lower">Lower</button><button class="equal" data-pick="equal">Equal</button></div></div>`;
+    screen.querySelectorAll('[data-pick]').forEach(btn=>btn.onclick=()=>resolve(btn.dataset.pick));
+  }
+
+  function resolve(pick){
+    const ref=Number(reference.v), ans=Number(challenge.v);
+    const truth=ans===ref?'equal':ans>ref?'higher':'lower';
+    const correct=pick===truth;
+    if(correct)scores[playerIndex]++;
+    const name=players[playerIndex];
+    screen.innerHTML=`<div class="card"><div class="result">${correct?'Correct':'Not this time'}</div><div class="player">${esc(name)}</div><div class="question">${esc(challenge.q)}</div><div class="number">${ans.toLocaleString()}</div><div class="small">You chose ${esc(pick)}. Correct relationship: ${esc(truth)}.</div></div>
+      <button class="primary" id="next">${truth==='equal'?'Start with a new number':'Next player'}</button>`;
+    screen.querySelector('#next').onclick=()=>{
+      playerIndex=(playerIndex+1)%players.length;
+      if(truth==='equal'){
+        startNewReference();
+      }else{
+        reference=challenge;
+        challenge=nextRelative(reference.v);
+        renderTurn(false);
+      }
+    };
+  }
+
+  setup();
+})();
+</script>
+</body>
+</html>
