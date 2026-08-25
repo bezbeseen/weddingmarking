@@ -7,8 +7,15 @@
 
   let miniIndex = 0;
   let overlay;
+  let closestAnchor = null;
   const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const catalog = () => Array.isArray(window.TAP_MINI_NUMERIC_CATALOG) ? window.TAP_MINI_NUMERIC_CATALOG : [];
+  async function readyCatalog(){
+    if (window.TAP_MINI_NUMERIC_CATALOG_READY) {
+      try { await window.TAP_MINI_NUMERIC_CATALOG_READY; } catch (_) {}
+    }
+    return catalog().filter(item => Number.isFinite(Number(item.v)) && Number(item.v) >= 50);
+  }
 
   function api(){ return document.getElementById('slap15')?.__miniGameAPI; }
   function ensure(){
@@ -25,30 +32,36 @@
   function close(){ overlay?.classList.remove('show'); }
   function players(){ return api()?.getPlayers?.() || []; }
 
-  function nextNumericQuestion(currentAnswer, usedIds) {
-    const available = catalog().filter(item => !usedIds.has(item.id) && Number.isFinite(Number(item.v)) && Number(item.v) !== Number(currentAnswer));
+  // JavaScript equivalent of the supplied pandas/numpy algorithm:
+  // filter used/non-numeric/exact matches, rank by log10 distance,
+  // then randomly choose one of the ten closest values.
+  function getNextNumericQuestion(currentAnswer, bank, usedIds) {
+    const current = Math.max(Number(currentAnswer) > 0 ? Number(currentAnswer) : 1, 1);
+    const available = bank.filter(item => {
+      const value = Number(item.v);
+      return !usedIds.has(item.id) && Number.isFinite(value) && value !== Number(currentAnswer);
+    });
     if (!available.length) return null;
-    const curr = Math.max(Math.abs(Number(currentAnswer)) || 1, 1);
-    let pool = available;
-    if (curr < 100) {
-      const near = available.filter(item => Math.abs(Number(item.v) - Number(currentAnswer)) <= 100);
-      if (near.length) pool = near;
-    }
-    const ranked = pool
-      .map(item => ({item, dist: Math.abs(Math.log10(Math.max(Math.abs(Number(item.v)),1)) - Math.log10(curr))}))
-      .sort((a,b) => a.dist - b.dist);
-    const top = ranked.slice(0,10).map(x=>x.item);
-    return top[Math.floor(Math.random()*top.length)] || ranked[0]?.item || null;
+    const ranked = available
+      .map(item => ({
+        item,
+        logDist: Math.abs(Math.log10(Math.max(Number(item.v),1)) - Math.log10(current))
+      }))
+      .sort((a,b) => a.logDist - b.logDist);
+    const topPool = ranked.slice(0,10).map(entry => entry.item);
+    return topPool[Math.floor(Math.random()*topPool.length)] || ranked[0]?.item || null;
   }
 
-  function higherLower(){
+  async function higherLower(){
     const ps=players();
-    const bank=catalog();
+    const bank=await readyCatalog();
     if (!ps.length || !bank.length) {
       shell('Higher / Lower','The separate numeric mini-game catalog is not available.',`<button class="primary" id="mgDone">Back to trivia</button>`);
       overlay.querySelector('#mgDone').onclick=close;
       return;
     }
+
+    // Every player participates exactly once, in player order.
     const used=new Set();
     let turn=0;
     let current=bank[Math.floor(Math.random()*bank.length)];
@@ -60,19 +73,22 @@
         overlay.querySelector('#mgDone').onclick=close;
         return;
       }
+
       const player=ps[turn];
-      const next=nextNumericQuestion(Number(current.v),used);
+      const next=getNextNumericQuestion(Number(current.v),bank,used);
       if(!next){
         shell('Higher / Lower complete','No more suitable numeric questions are available.',`<button class="primary" id="mgDone">Back to trivia</button>`);
         overlay.querySelector('#mgDone').onclick=close;
         return;
       }
       used.add(next.id);
+
       shell('Higher / Lower',`${player.name}'s turn. Correct answer earns +1 point.`,`
         <div class="mg-progress">Player ${turn+1} of ${ps.length}</div>
         <div class="mg-player">${esc(player.avatar)} ${esc(player.name)}</div>
         <div class="mg-card"><div class="mg-big">Previous answer</div><div class="mg-sub">${esc(current.q)}</div><div class="mg-value">${Number(current.v).toLocaleString()}</div></div>
         <div class="mg-card"><div class="mg-big">${esc(next.q)}</div><div class="mg-sub">Is the answer higher or lower than ${Number(current.v).toLocaleString()}?</div><div class="mg-grid"><button class="primary" id="mgHigher">Higher</button><button class="primary" id="mgLower">Lower</button></div></div>`);
+
       const resolve=guess=>{
         const direction=Number(next.v)>Number(current.v)?'higher':'lower';
         const won=guess===direction;
@@ -80,27 +96,42 @@
         shell(won?'Correct!':'Not this time',`${next.q} — ${Number(next.v).toLocaleString()}`,`
           <div class="mg-result">${won?`${esc(player.name)} +1 point`:`${esc(player.name)} scores 0`}</div>
           <button class="primary" id="mgNext">${turn+1<ps.length?'Next player':'Finish'}</button>`);
-        overlay.querySelector('#mgNext').onclick=()=>{current=next;turn+=1;showTurn();};
+        overlay.querySelector('#mgNext').onclick=()=>{
+          // The revealed answer is the numerical anchor for the next player.
+          current=next;
+          turn+=1;
+          showTurn();
+        };
       };
       overlay.querySelector('#mgHigher').onclick=()=>resolve('higher');
       overlay.querySelector('#mgLower').onclick=()=>resolve('lower');
     }
 
-    shell('Higher / Lower','Everybody plays once. Each revealed answer becomes the reference for the next player.',`
+    shell('Higher / Lower','Everybody plays once, in order. Each revealed answer sets the scale for the next player.',`
       <div class="mg-card"><div class="mg-big">Starting reference</div><div class="mg-sub">${esc(current.q)}</div><div class="mg-value">${Number(current.v).toLocaleString()}</div></div>
       <button class="primary" id="mgStartHL">Start with ${esc(ps[0].name)}</button>`);
     overlay.querySelector('#mgStartHL').onclick=showTurn;
   }
 
-  function closestWins(){
+  async function closestWins(){
     const ps=players();
-    const bank=catalog();
+    const bank=await readyCatalog();
     if(!ps.length || !bank.length){
       shell('Closest Wins','The separate numeric mini-game catalog is not available.',`<button class="primary" id="mgDone">Back to trivia</button>`);
       overlay.querySelector('#mgDone').onclick=close;
       return;
     }
-    const q=bank[Math.floor(Math.random()*bank.length)];
+
+    // Keep Closest Wins in the same numeric neighborhood from one appearance to the next.
+    const used=new Set();
+    let q;
+    if (closestAnchor == null) {
+      q=bank[Math.floor(Math.random()*bank.length)];
+    } else {
+      q=getNextNumericQuestion(closestAnchor,bank,used) || bank[Math.floor(Math.random()*bank.length)];
+    }
+    closestAnchor=Number(q.v);
+
     shell('Closest Wins','Every player guesses. Closest answer earns +1 point.',`<div class="mg-card"><div class="mg-big">${esc(q.q)}</div></div>${ps.map(p=>`<div class="mg-row"><strong>${esc(p.avatar)} ${esc(p.name)}</strong><input type="number" data-g="${p.index}" placeholder="Guess"></div>`).join('')}<button class="primary" id="mgReveal">Reveal answer</button>`);
     overlay.querySelector('#mgReveal').onclick=()=>{
       const guesses=[...overlay.querySelectorAll('[data-g]')].map(el=>({i:Number(el.dataset.g),v:Number(el.value)})).filter(x=>Number.isFinite(x.v));
