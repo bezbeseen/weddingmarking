@@ -53,7 +53,7 @@
 
     const assetNames=['questions-data-1.js','questions-data-2.js','questions-data-3.js','questions-data-4.js','questions-data-5.js','questions-data-6.js','questions-loader.js','sounds.js'];
     const assets=await Promise.all(assetNames.map(get));
-    const numericCatalogCode=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/9b8c82add4f8f254448c42940a953636b6944dfd/tap-trivia/marc-copy/local/numeric-catalog.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load numeric mini-game catalog.');return r.text()});
+    const numericCatalogCode=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/c524b578c3c8a3e007df7e49ce4c9e950c8e9f37/tap-trivia/marc-copy/local/numeric-catalog.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load numeric mini-game catalog.');return r.text()});
     const miniGameCode=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/8ee0cb7dbfac3eb8ff41eed76a2fd42c6af7d779/tap-trivia/marc-copy/local/mini-games.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load mini games.');return r.text()});
     const scripts=assets.map(x=>'<script>'+esc(x)+'<\/script>').join('\n')+'\n<script>'+esc(game)+'<\/script>\n<script>'+esc(numericCatalogCode)+'<\/script>\n<script>'+esc(miniGameCode)+'<\/script>';
     app=app.replace(/<\/div>\s*$/i,scripts+'</div>');
