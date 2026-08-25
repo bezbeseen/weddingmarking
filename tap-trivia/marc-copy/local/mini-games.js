@@ -31,10 +31,15 @@
   }
   function close(){ overlay?.classList.remove('show'); }
   function players(){ return api()?.getPlayers?.() || []; }
+  function orderedFromLastScorer(){
+    const ps=players();
+    if(!ps.length) return [];
+    const wanted=api()?.getLastScorerIndex?.();
+    const pos=ps.findIndex(p=>p.index===wanted);
+    const start=pos>=0?pos:0;
+    return ps.slice(start).concat(ps.slice(0,start));
+  }
 
-  // JavaScript equivalent of the supplied pandas/numpy algorithm:
-  // filter used/non-numeric/exact matches, rank by log10 distance,
-  // then randomly choose one of the ten closest values.
   function getNextNumericQuestion(currentAnswer, bank, usedIds) {
     const current = Math.max(Number(currentAnswer) > 0 ? Number(currentAnswer) : 1, 1);
     const available = bank.filter(item => {
@@ -43,37 +48,39 @@
     });
     if (!available.length) return null;
     const ranked = available
-      .map(item => ({
-        item,
-        logDist: Math.abs(Math.log10(Math.max(Number(item.v),1)) - Math.log10(current))
-      }))
-      .sort((a,b) => a.logDist - b.logDist);
-    const topPool = ranked.slice(0,10).map(entry => entry.item);
+      .map(item => ({item,logDist:Math.abs(Math.log10(Math.max(Number(item.v),1))-Math.log10(current))}))
+      .sort((a,b)=>a.logDist-b.logDist);
+    const topPool=ranked.slice(0,10).map(entry=>entry.item);
     return topPool[Math.floor(Math.random()*topPool.length)] || ranked[0]?.item || null;
   }
 
-  async function higherLower(){
-    const ps=players();
+  function higherLower(){
+    const ordered=orderedFromLastScorer();
+    if(!ordered.length) return;
+    const starter=ordered[0];
+    shell('Higher / Lower',`${starter.name} received the last point and starts the challenge.`,`<div class="mg-player">${esc(starter.avatar)} ${esc(starter.name)}</div><button class="primary" id="mgStartChallenge">Start the challenge</button>`);
+    overlay.querySelector('#mgStartChallenge').onclick=()=>runHigherLower(ordered);
+  }
+
+  async function runHigherLower(ps){
+    shell('Higher / Lower','Loading the numeric challenge...',`<div class="mg-result">Preparing questions...</div>`);
     const bank=await readyCatalog();
-    if (!ps.length || !bank.length) {
-      shell('Higher / Lower','The separate numeric mini-game catalog is not available.',`<button class="primary" id="mgDone">Back to trivia</button>`);
+    if(!bank.length){
+      shell('Higher / Lower','The numeric challenge could not load.',`<button class="primary" id="mgDone">Back to trivia</button>`);
       overlay.querySelector('#mgDone').onclick=close;
       return;
     }
-
-    // Every player participates exactly once, in player order.
     const used=new Set();
     let turn=0;
     let current=bank[Math.floor(Math.random()*bank.length)];
     used.add(current.id);
 
     function showTurn(){
-      if (turn >= ps.length) {
+      if(turn>=ps.length){
         shell('Higher / Lower complete','Everybody had one turn.',`<div class="mg-result">Back to the main game.</div><button class="primary" id="mgDone">Back to trivia</button>`);
         overlay.querySelector('#mgDone').onclick=close;
         return;
       }
-
       const player=ps[turn];
       const next=getNextNumericQuestion(Number(current.v),bank,used);
       if(!next){
@@ -82,57 +89,42 @@
         return;
       }
       used.add(next.id);
-
-      shell('Higher / Lower',`${player.name}'s turn. Correct answer earns +1 point.`,`
-        <div class="mg-progress">Player ${turn+1} of ${ps.length}</div>
-        <div class="mg-player">${esc(player.avatar)} ${esc(player.name)}</div>
-        <div class="mg-card"><div class="mg-big">Previous answer</div><div class="mg-sub">${esc(current.q)}</div><div class="mg-value">${Number(current.v).toLocaleString()}</div></div>
-        <div class="mg-card"><div class="mg-big">${esc(next.q)}</div><div class="mg-sub">Is the answer higher or lower than ${Number(current.v).toLocaleString()}?</div><div class="mg-grid"><button class="primary" id="mgHigher">Higher</button><button class="primary" id="mgLower">Lower</button></div></div>`);
-
+      shell('Higher / Lower',`${player.name}'s turn. Correct answer earns +1 point.`,`<div class="mg-progress">Player ${turn+1} of ${ps.length}</div><div class="mg-player">${esc(player.avatar)} ${esc(player.name)}</div><div class="mg-card"><div class="mg-big">Previous answer</div><div class="mg-sub">${esc(current.q)}</div><div class="mg-value">${Number(current.v).toLocaleString()}</div></div><div class="mg-card"><div class="mg-big">${esc(next.q)}</div><div class="mg-sub">Is the answer higher or lower than ${Number(current.v).toLocaleString()}?</div><div class="mg-grid"><button class="primary" id="mgHigher">Higher</button><button class="primary" id="mgLower">Lower</button></div></div>`);
       const resolve=guess=>{
         const direction=Number(next.v)>Number(current.v)?'higher':'lower';
         const won=guess===direction;
         if(won)api().addPoints(player.index,1);
-        shell(won?'Correct!':'Not this time',`${next.q} — ${Number(next.v).toLocaleString()}`,`
-          <div class="mg-result">${won?`${esc(player.name)} +1 point`:`${esc(player.name)} scores 0`}</div>
-          <button class="primary" id="mgNext">${turn+1<ps.length?'Next player':'Finish'}</button>`);
-        overlay.querySelector('#mgNext').onclick=()=>{
-          // The revealed answer is the numerical anchor for the next player.
-          current=next;
-          turn+=1;
-          showTurn();
-        };
+        shell(won?'Correct!':'Not this time',`${next.q} — ${Number(next.v).toLocaleString()}`,`<div class="mg-result">${won?`${esc(player.name)} +1 point`:`${esc(player.name)} scores 0`}</div><button class="primary" id="mgNext">${turn+1<ps.length?'Next player':'Finish'}</button>`);
+        overlay.querySelector('#mgNext').onclick=()=>{current=next;turn+=1;showTurn();};
       };
       overlay.querySelector('#mgHigher').onclick=()=>resolve('higher');
       overlay.querySelector('#mgLower').onclick=()=>resolve('lower');
     }
-
-    shell('Higher / Lower','Everybody plays once, in order. Each revealed answer sets the scale for the next player.',`
-      <div class="mg-card"><div class="mg-big">Starting reference</div><div class="mg-sub">${esc(current.q)}</div><div class="mg-value">${Number(current.v).toLocaleString()}</div></div>
-      <button class="primary" id="mgStartHL">Start with ${esc(ps[0].name)}</button>`);
-    overlay.querySelector('#mgStartHL').onclick=showTurn;
+    showTurn();
   }
 
-  async function closestWins(){
-    const ps=players();
+  function closestWins(){
+    const ordered=orderedFromLastScorer();
+    if(!ordered.length) return;
+    const starter=ordered[0];
+    shell('Closest Wins',`${starter.name} received the last point and starts the challenge.`,`<div class="mg-player">${esc(starter.avatar)} ${esc(starter.name)}</div><button class="primary" id="mgStartChallenge">Start the challenge</button>`);
+    overlay.querySelector('#mgStartChallenge').onclick=()=>runClosestWins(ordered);
+  }
+
+  async function runClosestWins(ps){
+    shell('Closest Wins','Loading the numeric challenge...',`<div class="mg-result">Preparing question...</div>`);
     const bank=await readyCatalog();
-    if(!ps.length || !bank.length){
-      shell('Closest Wins','The separate numeric mini-game catalog is not available.',`<button class="primary" id="mgDone">Back to trivia</button>`);
+    if(!bank.length){
+      shell('Closest Wins','The numeric challenge could not load.',`<button class="primary" id="mgDone">Back to trivia</button>`);
       overlay.querySelector('#mgDone').onclick=close;
       return;
     }
-
-    // Keep Closest Wins in the same numeric neighborhood from one appearance to the next.
     const used=new Set();
     let q;
-    if (closestAnchor == null) {
-      q=bank[Math.floor(Math.random()*bank.length)];
-    } else {
-      q=getNextNumericQuestion(closestAnchor,bank,used) || bank[Math.floor(Math.random()*bank.length)];
-    }
+    if(closestAnchor==null) q=bank[Math.floor(Math.random()*bank.length)];
+    else q=getNextNumericQuestion(closestAnchor,bank,used)||bank[Math.floor(Math.random()*bank.length)];
     closestAnchor=Number(q.v);
-
-    shell('Closest Wins','Every player guesses. Closest answer earns +1 point.',`<div class="mg-card"><div class="mg-big">${esc(q.q)}</div></div>${ps.map(p=>`<div class="mg-row"><strong>${esc(p.avatar)} ${esc(p.name)}</strong><input type="number" data-g="${p.index}" placeholder="Guess"></div>`).join('')}<button class="primary" id="mgReveal">Reveal answer</button>`);
+    shell('Closest Wins',`${ps[0].name} starts. Every player guesses; closest answer earns +1 point.`,`<div class="mg-card"><div class="mg-big">${esc(q.q)}</div></div>${ps.map(p=>`<div class="mg-row"><strong>${esc(p.avatar)} ${esc(p.name)}</strong><input type="number" data-g="${p.index}" placeholder="Guess"></div>`).join('')}<button class="primary" id="mgReveal">Reveal answer</button>`);
     overlay.querySelector('#mgReveal').onclick=()=>{
       const guesses=[...overlay.querySelectorAll('[data-g]')].map(el=>({i:Number(el.dataset.g),v:Number(el.value)})).filter(x=>Number.isFinite(x.v));
       if(!guesses.length)return;
@@ -159,7 +151,7 @@
     });
   }
   function runRapid(i,cat){
-    const qs=RAPID[cat].slice().sort(()=>Math.random()-.5); let n=0, correct=0, seconds=60, timer;
+    const qs=RAPID[cat].slice().sort(()=>Math.random()-.5); let n=0,correct=0,seconds=60,timer;
     const finish=()=>{clearInterval(timer);const p=players()[i];let newScore=p.score,label='No score change';if(correct>=11){newScore=Math.max(p.score+4,api().getLeaderScore()-1);api().setScore(i,newScore);label=`Score moves to ${newScore}`;}else if(correct>=8){api().addPoints(i,2);label='+2 points';}else if(correct>=4){api().addPoints(i,1);label='+1 point';}shell('Rapid Fire complete',`${correct} correct.`,`<div class="mg-result">${esc(label)}</div><button class="primary" id="mgDone">Back to trivia</button>`);overlay.querySelector('#mgDone').onclick=close;};
     const draw=()=>{const q=qs[n%qs.length];shell('Rapid Fire',`${players()[i]?.name} · ${cat} · ${seconds}s · ${correct} correct`,`<div class="mg-card"><div class="mg-big">${esc(q[0])}</div><div class="mg-sub" style="margin-top:16px">Answer: ${esc(q[1])}</div></div><div class="mg-grid"><button class="good" id="mgCorrect">Correct</button><button class="bad" id="mgPass">Pass</button><button class="primary" id="mgFinish">Finish</button></div>`);overlay.querySelector('#mgCorrect').onclick=()=>{correct++;n++;draw()};overlay.querySelector('#mgPass').onclick=()=>{n++;draw()};overlay.querySelector('#mgFinish').onclick=finish;};
     timer=setInterval(()=>{seconds--;if(seconds<=0)finish();else draw();},1000);draw();
