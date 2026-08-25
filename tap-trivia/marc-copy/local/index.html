@@ -7,16 +7,23 @@
   try{
     const source='https://raw.githubusercontent.com/bezbeseen/weddingmarking/902eb8909f7290f4d205588dd82193d6f905a490/tap-trivia/marc-copy/local/index.html';
     let html=await fetch(source,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load Tap Trivia.');return r.text()});
+
+    // Keep the current Tap Trivia fixes.
     html=html.replace('3e1ec156404b2308211625a35ae27e653740dbe6','bc4588b7495749bcfbdb051c4573764e3096e949');
     html=html.replace('8ee0cb7dbfac3eb8ff41eed76a2fd42c6af7d779','3e289771da845d73865e25fe1acf092d32306e71');
 
-    const closeScript='</scr'+'ipt>';
-    const extras=
-      '<script src="https://raw.githubusercontent.com/bezbeseen/weddingmarking/73c562df5ff6927e0ecd2e4848ff4ecfa8068bf6/tap-trivia/marc-copy/local/price-guess-plugin.js">'+closeScript+
-      '<script src="https://raw.githubusercontent.com/bezbeseen/weddingmarking/03a5bb8afe4232b9144b9c7ac24743df496586be/tap-trivia/marc-copy/local/what-came-first-plugin.js">'+closeScript+
-      '<script src="https://raw.githubusercontent.com/bezbeseen/weddingmarking/e23e2952fcf8327c42601e47dd7baa75a0b1e480/tap-trivia/marc-copy/local/price-guess-rotation.js">'+closeScript;
+    // IMPORTANT: the fetched bootstrap writes a second/final document. The mini-game
+    // plugins must therefore be embedded in THAT final document, not appended here.
+    const oldFetch="    const miniGameCode=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/3e289771da845d73865e25fe1acf092d32306e71/tap-trivia/marc-copy/local/mini-games.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load mini games.');return r.text()});";
+    const newFetch=oldFetch+"\n    const priceGuessCode=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/73c562df5ff6927e0ecd2e4848ff4ecfa8068bf6/tap-trivia/marc-copy/local/price-guess-plugin.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load Price Guess.');return r.text()});\n    const whatCameFirstCode=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/03a5bb8afe4232b9144b9c7ac24743df496586be/tap-trivia/marc-copy/local/what-came-first-plugin.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load What Came First.');return r.text()});\n    const fullRotationCode=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/e23e2952fcf8327c42601e47dd7baa75a0b1e480/tap-trivia/marc-copy/local/price-guess-rotation.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load four-game rotation.');return r.text()});";
+    if(!html.includes(oldFetch)) throw new Error('Could not patch mini-game fetch block.');
+    html=html.replace(oldFetch,newFetch);
 
-    html=html.replace('</body>',extras+'</body>');
+    const oldScripts="    const scripts=assets.map(x=>'<script>'+esc(x)+'<\\/script>').join('\\n')+'\\n<script>'+esc(game)+'<\\/script>\\n<script>'+esc(numericCatalogCode)+'<\\/script>\\n<script>'+esc(miniGameCode)+'<\\/script>';";
+    const newScripts="    const scripts=assets.map(x=>'<script>'+esc(x)+'<\\/script>').join('\\n')+'\\n<script>'+esc(game)+'<\\/script>\\n<script>'+esc(numericCatalogCode)+'<\\/script>\\n<script>'+esc(miniGameCode)+'<\\/script>\\n<script>'+esc(priceGuessCode)+'<\\/script>\\n<script>'+esc(whatCameFirstCode)+'<\\/script>\\n<script>'+esc(fullRotationCode)+'<\\/script>';";
+    if(!html.includes(oldScripts)) throw new Error('Could not patch final mini-game script block.');
+    html=html.replace(oldScripts,newScripts);
+
     document.open();document.write(html);document.close();
   }catch(err){document.body.innerHTML='<pre style="padding:20px;font-family:system-ui;white-space:pre-wrap">'+String(err&&err.stack||err)+'</pre>';}
 })();
