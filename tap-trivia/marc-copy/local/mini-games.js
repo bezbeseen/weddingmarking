@@ -9,7 +9,7 @@
   let overlay;
   let closestAnchor = null;
   let cachedNumericBank = null;
-  const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
   const catalog = () => Array.isArray(window.TAP_MINI_NUMERIC_CATALOG) ? window.TAP_MINI_NUMERIC_CATALOG : [];
   async function readyCatalog(){
     if (cachedNumericBank && cachedNumericBank.length) return cachedNumericBank;
@@ -24,7 +24,7 @@
   function ensure(){
     if (overlay) return overlay;
     const style=document.createElement('style');
-    style.textContent=`#tapMiniGame{position:fixed;inset:0;z-index:200;background:#111214;color:#fff;display:none;overflow:auto;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}#tapMiniGame.show{display:block}#tapMiniGame .mg-wrap{max-width:900px;margin:0 auto;padding:28px 20px 42px}#tapMiniGame .mg-kicker{text-transform:uppercase;letter-spacing:.14em;font-weight:900;opacity:.7}#tapMiniGame h2{font-size:clamp(42px,8vw,76px);margin:8px 0 10px;line-height:.95}#tapMiniGame .mg-sub{font-size:22px;font-weight:750;opacity:.8;margin-bottom:24px}#tapMiniGame .mg-card{background:#202226;border-radius:22px;padding:22px;margin:16px 0}#tapMiniGame .mg-big{font-size:clamp(28px,6vw,48px);font-weight:900;line-height:1.12}#tapMiniGame .mg-value{font-size:clamp(46px,10vw,82px);font-weight:950;margin:12px 0}#tapMiniGame .mg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}#tapMiniGame button{min-height:64px;border:0;border-radius:16px;padding:12px 16px;font-size:20px;font-weight:900;cursor:pointer}#tapMiniGame .primary{background:#fff;color:#111}#tapMiniGame .good{background:#15803d;color:#fff}#tapMiniGame .bad{background:#b42318;color:#fff}#tapMiniGame input{width:100%;min-height:58px;border-radius:14px;border:1px solid #555;background:#fff;color:#111;padding:10px 14px;font-size:22px;font-weight:800}#tapMiniGame .mg-row{display:grid;grid-template-columns:1fr 180px;gap:10px;align-items:center;margin:10px 0}#tapMiniGame .mg-result{font-size:26px;font-weight:900;margin-top:18px}#tapMiniGame .mg-player{display:flex;align-items:center;gap:12px;font-size:28px;font-weight:950;margin-bottom:12px}#tapMiniGame .mg-progress{font-size:15px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;opacity:.66}`;
+    style.textContent=`#tapMiniGame{position:fixed;inset:0;z-index:200;background:#111214;color:#fff;display:none;overflow:auto;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}#tapMiniGame.show{display:block}#tapMiniGame .mg-wrap{max-width:900px;margin:0 auto;padding:28px 20px 42px}#tapMiniGame .mg-kicker{text-transform:uppercase;letter-spacing:.14em;font-weight:900;opacity:.7}#tapMiniGame h2{font-size:clamp(42px,8vw,76px);margin:8px 0 10px;line-height:.95}#tapMiniGame .mg-sub{font-size:22px;font-weight:750;opacity:.8;margin-bottom:24px}#tapMiniGame .mg-card{background:#202226;border-radius:22px;padding:22px;margin:16px 0}#tapMiniGame .mg-big{font-size:clamp(28px,6vw,48px);font-weight:900;line-height:1.12}#tapMiniGame .mg-value{font-size:clamp(46px,10vw,82px);font-weight:950;margin:12px 0}#tapMiniGame .mg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}#tapMiniGame button{min-height:64px;border:0;border-radius:16px;padding:12px 16px;font-size:20px;font-weight:900;cursor:pointer}#tapMiniGame .primary{background:#fff;color:#111}#tapMiniGame .answer-btn{min-height:92px;font-size:30px}#tapMiniGame .good{background:#15803d;color:#fff}#tapMiniGame .bad{background:#b42318;color:#fff}#tapMiniGame input{width:100%;min-height:58px;border-radius:14px;border:1px solid #555;background:#fff;color:#111;padding:10px 14px;font-size:22px;font-weight:800}#tapMiniGame .mg-row{display:grid;grid-template-columns:1fr 180px;gap:10px;align-items:center;margin:10px 0}#tapMiniGame .mg-result{font-size:26px;font-weight:900;margin-top:18px}#tapMiniGame .mg-player{display:flex;align-items:center;gap:12px;font-size:28px;font-weight:950;margin-bottom:12px}#tapMiniGame .mg-progress{font-size:15px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;opacity:.66}`;
     document.head.appendChild(style);
     overlay=document.createElement('div'); overlay.id='tapMiniGame'; document.body.appendChild(overlay); return overlay;
   }
@@ -96,12 +96,19 @@
         return;
       }
       used.add(next.id);
-      shell('Higher / Lower',`${player.name}'s turn.`,`<div class="mg-progress">Player ${turn+1} of ${ps.length}</div><div class="mg-player">${esc(player.avatar)} ${esc(player.name)}</div><div class="mg-card"><div class="mg-big">Previous answer</div><div class="mg-sub">${esc(current.q)}</div><div class="mg-value">${Number(current.v).toLocaleString()}</div></div><div class="mg-card"><div class="mg-big">${esc(next.q)}</div><div class="mg-sub">Is the answer higher or lower than ${Number(current.v).toLocaleString()}?</div><div class="mg-grid"><button type="button" class="primary" id="mgHigher">Higher</button><button type="button" class="primary" id="mgLower">Lower</button></div></div>`);
+      let answered=false;
+      shell('Higher / Lower',`${player.name}, choose Higher or Lower before play can move to the next player.`,`<div class="mg-progress">Player ${turn+1} of ${ps.length}</div><div class="mg-player">${esc(player.avatar)} ${esc(player.name)}</div><div class="mg-card"><div class="mg-big">Previous answer</div><div class="mg-sub">${esc(current.q)}</div><div class="mg-value">${Number(current.v).toLocaleString()}</div></div><div class="mg-card"><div class="mg-big">${esc(next.q)}</div><div class="mg-sub">Is this answer higher or lower than ${Number(current.v).toLocaleString()}?</div><div class="mg-grid"><button type="button" class="primary answer-btn" id="mgHigher">Higher</button><button type="button" class="primary answer-btn" id="mgLower">Lower</button></div></div>`);
       const resolve=guess=>{
+        if(answered) return;
+        answered=true;
+        const higherBtn=overlay.querySelector('#mgHigher');
+        const lowerBtn=overlay.querySelector('#mgLower');
+        if(higherBtn) higherBtn.disabled=true;
+        if(lowerBtn) lowerBtn.disabled=true;
         const direction=Number(next.v)>Number(current.v)?'higher':'lower';
         const won=guess===direction;
         if(won)api().addPoints(player.index,1);
-        shell(won?'Correct!':'Not this time',`${next.q} — ${Number(next.v).toLocaleString()}`,`<div class="mg-result">${won?`${esc(player.name)} +1 point`:`${esc(player.name)} scores 0`}</div><button type="button" class="primary" id="mgNext">${turn+1<ps.length?'Next player':'Finish round'}</button>`);
+        shell(won?'Correct!':'Not this time',`${next.q} — ${Number(next.v).toLocaleString()}`,`<div class="mg-result">${won?`${esc(player.name)} +1 point`:`${esc(player.name)} scores 0`}</div><div class="mg-sub">${turn+1<ps.length?`${esc(ps[turn+1].name)} is next.`:'Every player has answered.'}</div><button type="button" class="primary" id="mgNext">${turn+1<ps.length?'Next player':'Finish round'}</button>`);
         overlay.querySelector('#mgNext').onclick=(event)=>{
           event.preventDefault();
           event.stopPropagation();
