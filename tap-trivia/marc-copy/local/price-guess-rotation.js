@@ -19,20 +19,16 @@
       }
 
       let round=1;
-
       const startRound=()=>{
         plugin.launch(root.__miniGameAPI);
-
         const wire=setInterval(()=>{
           const overlay=document.getElementById('tapWhatCameFirst');
           if(!overlay)return;
-
           const kicker=overlay.querySelector('.wcf-kicker');
           if(kicker && !kicker.dataset.twoRoundLabel){
             kicker.dataset.twoRoundLabel='1';
             kicker.textContent='Round '+round+' of 2 · '+kicker.textContent;
           }
-
           const back=overlay.querySelector('#wcfBack');
           if(back && !back.dataset.twoRoundWired){
             back.dataset.twoRoundWired='1';
@@ -49,18 +45,12 @@
           }
         },40);
       };
-
       startRound();
     }
 
     root.__launchMiniGame=()=>{
       const slot=rotationIndex++%4;
 
-      // Rotation:
-      // 0 Closest Wins (existing original #1)
-      // 1 Price Guess
-      // 2 What Came First (two rounds)
-      // 3 Rapid Fire (existing original #2)
       if(slot===0){
         original();
         return;
@@ -81,7 +71,12 @@
         return;
       }
 
-      original();
+      if(window.TapRapidFirePlugin?.launch){
+        window.TapRapidFirePlugin.launch(root.__miniGameAPI);
+      }else{
+        console.error('Rapid Fire plugin is not loaded.');
+        original();
+      }
     };
 
     clearInterval(wait);
