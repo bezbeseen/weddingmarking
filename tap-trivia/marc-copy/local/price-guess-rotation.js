@@ -10,12 +10,58 @@
     const original=root.__launchMiniGame;
     let rotationIndex=0;
 
+    function launchWhatCameFirstTwoRounds(){
+      const plugin=window.TapWhatCameFirstPlugin;
+      if(!plugin?.launch){
+        console.error('What Came First plugin is not loaded.');
+        original();
+        return;
+      }
+
+      let round=1;
+
+      const startRound=()=>{
+        plugin.launch(root.__miniGameAPI);
+
+        const wire=setInterval(()=>{
+          const overlay=document.getElementById('tapWhatCameFirst');
+          if(!overlay)return;
+
+          const kicker=overlay.querySelector('.wcf-kicker');
+          if(kicker && !kicker.dataset.twoRoundLabel){
+            kicker.dataset.twoRoundLabel='1';
+            kicker.textContent='Round '+round+' of 2 · '+kicker.textContent;
+          }
+
+          const back=overlay.querySelector('#wcfBack');
+          if(back && !back.dataset.twoRoundWired){
+            back.dataset.twoRoundWired='1';
+            if(round===1){
+              back.textContent='Start Round 2';
+              back.addEventListener('click',()=>{
+                round=2;
+                setTimeout(startRound,60);
+              });
+            }else{
+              back.textContent='Back to trivia';
+            }
+            clearInterval(wire);
+          }
+        },40);
+      };
+
+      startRound();
+    }
+
     root.__launchMiniGame=()=>{
       const slot=rotationIndex++%4;
 
-      // The existing mini-games.js alternates its own two games.
-      // Calling it in slots 0 and 2 preserves Closest Wins then Rapid Fire.
-      if(slot===0 || slot===2){
+      // Rotation:
+      // 0 Closest Wins (existing original #1)
+      // 1 Price Guess
+      // 2 What Came First (two rounds)
+      // 3 Rapid Fire (existing original #2)
+      if(slot===0){
         original();
         return;
       }
@@ -30,12 +76,12 @@
         return;
       }
 
-      if(window.TapWhatCameFirstPlugin?.launch){
-        window.TapWhatCameFirstPlugin.launch(root.__miniGameAPI);
-      }else{
-        console.error('What Came First plugin is not loaded.');
-        original();
+      if(slot===2){
+        launchWhatCameFirstTwoRounds();
+        return;
       }
+
+      original();
     };
 
     clearInterval(wait);
