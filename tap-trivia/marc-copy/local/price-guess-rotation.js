@@ -17,7 +17,6 @@
         original();
         return;
       }
-
       let round=1;
       const startRound=()=>{
         plugin.launch(root.__miniGameAPI);
@@ -52,7 +51,12 @@
       const slot=rotationIndex++%4;
 
       if(slot===0){
-        original();
+        if(window.TapClosestWinsPlugin?.launch){
+          window.TapClosestWinsPlugin.launch(root.__miniGameAPI);
+        }else{
+          console.error('Closest Wins plugin is not loaded.');
+          original();
+        }
         return;
       }
 
