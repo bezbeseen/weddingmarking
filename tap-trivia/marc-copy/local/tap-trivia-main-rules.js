@@ -29,6 +29,22 @@
   const setupText=root.querySelector('#setupPanel .qtext');
   if(setupText)setupText.textContent='Set the players and winning score.';
 
+  // Replace any built-in sample names with Player 1, Player 2, etc.
+  function normalizePlayerNames(){
+    const inputs=[...root.querySelectorAll('#nameFields input')];
+    inputs.forEach((input,i)=>{
+      const generic='Player '+(i+1);
+      input.value=generic;
+      input.placeholder=generic;
+    });
+  }
+  normalizePlayerNames();
+
+  const playerCount=root.querySelector('#playerCount');
+  if(playerCount){
+    playerCount.addEventListener('change',()=>setTimeout(normalizePlayerNames,0));
+  }
+
   function shuffle(arr){
     const out=arr.slice();
     for(let i=out.length-1;i>0;i--){
