@@ -3,11 +3,40 @@
   const root=document.getElementById('slap15');
   if(!root)return;
 
-  // Branding.
+  // Branding: remove every visible SLAP 15 reference while leaving internal
+  // IDs/data variables alone so the existing game logic is not disturbed.
   document.title='Tap Trivia';
-  const h1=root.querySelector('h1');
-  if(h1)h1.textContent='Tap Trivia';
-  root.querySelectorAll('.brand').forEach(el=>el.textContent='Tap Trivia');
+  function replaceBrandText(scope=document){
+    const walker=document.createTreeWalker(scope,NodeFilter.SHOW_TEXT);
+    const nodes=[];
+    while(walker.nextNode())nodes.push(walker.currentNode);
+    nodes.forEach(node=>{
+      if(/SLAP\s*15/i.test(node.nodeValue||'')){
+        node.nodeValue=node.nodeValue.replace(/SLAP\s*15/gi,'Tap Trivia');
+      }
+    });
+    if(scope.querySelectorAll){
+      scope.querySelectorAll('[aria-label],[title],[placeholder]').forEach(el=>{
+        ['aria-label','title','placeholder'].forEach(attr=>{
+          const value=el.getAttribute(attr);
+          if(value&&/SLAP\s*15/i.test(value))el.setAttribute(attr,value.replace(/SLAP\s*15/gi,'Tap Trivia'));
+        });
+      });
+    }
+  }
+  replaceBrandText(document);
+  const brandObserver=new MutationObserver(mutations=>{
+    for(const mutation of mutations){
+      mutation.addedNodes.forEach(node=>{
+        if(node.nodeType===Node.TEXT_NODE){
+          if(/SLAP\s*15/i.test(node.nodeValue||''))node.nodeValue=node.nodeValue.replace(/SLAP\s*15/gi,'Tap Trivia');
+        }else if(node.nodeType===Node.ELEMENT_NODE){
+          replaceBrandText(node);
+        }
+      });
+    }
+  });
+  brandObserver.observe(document.body,{childList:true,subtree:true});
 
   // Keep the existing game logic intact, but make Host the default mode.
   const mode=root.querySelector('#gameMode');
