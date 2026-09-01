@@ -21,6 +21,12 @@
     if(!html.includes(marker)) throw new Error('Could not prepare stable loader.');
     html=html.replace(marker,replacement);
 
+    // Keep authored database options attached to each playable question.
+    const assetMarker="    const assets=await Promise.all(assetNames.map(get));";
+    const assetReplacement=assetMarker+"\n    const questionLoaderIndex=assetNames.indexOf('questions-loader.js');\n    if(questionLoaderIndex>=0){assets[questionLoaderIndex]=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/tap-trivia/tap-trivia/marc-copy/local/questions-loader-preserve-options.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load option-preserving question loader.');return r.text()});}";
+    if(!html.includes(assetMarker)) throw new Error('Could not wire authored question choices.');
+    html=html.replace(assetMarker,assetReplacement);
+
     document.open();document.write(html);document.close();
   }catch(err){document.body.innerHTML='<pre style="padding:20px;font-family:system-ui;white-space:pre-wrap">'+String(err&&err.stack||err)+'</pre>';}
 })();
