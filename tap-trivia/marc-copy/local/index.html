@@ -8,18 +8,18 @@
     const source='https://raw.githubusercontent.com/bezbeseen/weddingmarking/b7c0c3d7dedaca1459bad5af441d41389ae64b6c/tap-trivia/marc-copy/local/index.html';
     let html=await fetch(source,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load Tap Trivia.');return r.text()});
 
-    // Remove the old runtime scoring guard that was breaking the whole loader.
-    html=html.replace(/\n    const miniHookLine=[\s\S]*?html=html\.replace\(miniHookLine,scoringPatch\);\n/,'\n');
+    // Fix the known scoring-patch hash mismatch inside the stable loader.
+    html=html.replace(
+      "const miniHookLine=\"    const miniHook=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/3e1ec156404b2308211625a35ae27e653740dbe6/tap-trivia/marc-copy/local/mini-api-inject.js'",
+      "const miniHookLine=\"    const miniHook=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/bc4588b7495749bcfbdb051c4573764e3096e949/tap-trivia/marc-copy/local/mini-api-inject.js'"
+    );
 
-    // Make the fixed -1 penalty directly inside the game source while the loader has access to `game`.
-    const oldFetchMarker='    const oldFetch="    const miniGameCode=await fetch(';
-    const scoringLines="    game=game.replace('      const nextPenalty = state.misses[i] + 1;','      const nextPenalty = 1;');\n    game=game.replace('    const penalty = state.misses[i];\\n    state.scores[i] -= penalty;','    const penalty = 1;\\n    state.scores[i] -= 1;');\n\n";
-    if(!html.includes(oldFetchMarker)) throw new Error('Could not locate game patch point.');
-    html=html.replace(oldFetchMarker,scoringLines+oldFetchMarker);
-
-    // Always use the current mini-game integration, which contains the smart multiple-choice logic.
-    html=html.replace(/https:\/\/raw\.githubusercontent\.com\/bezbeseen\/weddingmarking\/[a-f0-9]+\/tap-trivia\/marc-copy\/local\/mini-api-inject\.js/g,
-      'https://raw.githubusercontent.com/bezbeseen/weddingmarking/tap-trivia/tap-trivia/marc-copy/local/mini-api-inject.js');
+    // After that guard succeeds, point the actual mini-game integration at the
+    // current branch version, which contains the smart No One Knows choices.
+    const marker='    html=html.replace(miniHookLine,scoringPatch);';
+    const replacement=marker+"\n    html=html.replace('https://raw.githubusercontent.com/bezbeseen/weddingmarking/bc4588b7495749bcfbdb051c4573764e3096e949/tap-trivia/marc-copy/local/mini-api-inject.js','https://raw.githubusercontent.com/bezbeseen/weddingmarking/tap-trivia/tap-trivia/marc-copy/local/mini-api-inject.js');";
+    if(!html.includes(marker)) throw new Error('Could not prepare stable loader.');
+    html=html.replace(marker,replacement);
 
     document.open();document.write(html);document.close();
   }catch(err){document.body.innerHTML='<pre style="padding:20px;font-family:system-ui;white-space:pre-wrap">'+String(err&&err.stack||err)+'</pre>';}
