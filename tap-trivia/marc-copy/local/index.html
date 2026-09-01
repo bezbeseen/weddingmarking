@@ -11,6 +11,12 @@
       "const miniHookLine=\"    const miniHook=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/3e1ec156404b2308211625a35ae27e653740dbe6/tap-trivia/marc-copy/local/mini-api-inject.js'",
       "const miniHookLine=\"    const miniHook=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/bc4588b7495749bcfbdb051c4573764e3096e949/tap-trivia/marc-copy/local/mini-api-inject.js'"
     );
+
+    const hook='    const oldFetch="    const miniGameCode=await fetch(\'https://raw.githubusercontent.com/bezbeseen/weddingmarking/3e289771da845d73865e25fe1acf092d32306e71/tap-trivia/marc-copy/local/mini-games.js\',{cache:\'no-store\'}).then(r=>{if(!r.ok)throw new Error(\'Could not load mini games.\');return r.text()});";';
+    const inject=`    const smartMcFunction=await fetch('https://raw.githubusercontent.com/bezbeseen/weddingmarking/tap-trivia/tap-trivia/marc-copy/local/smart-multiple-choice-function.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Could not load smart multiple choice.');return r.text()});\n    game=game.replace(/  function buildChoices\\(question\\) \\{[\\s\\S]*?\\n  \\}\\n\\n  function buildNameFields\\(\\)/, smartMcFunction+'\\n\\n  function buildNameFields()');\n    if(!game.includes('smart-mc')) throw new Error('Could not patch smart multiple choice.');\n\n${hook}`;
+    if(!html.includes(hook)) throw new Error('Could not wire smart multiple choice.');
+    html=html.replace(hook,inject);
+
     document.open();document.write(html);document.close();
   }catch(err){document.body.innerHTML='<pre style="padding:20px;font-family:system-ui;white-space:pre-wrap">'+String(err&&err.stack||err)+'</pre>';}
 })();
