@@ -27,15 +27,12 @@
     }
   };
 
-  // "No One Knows" choices: prefer authored options, then semantic families,
-  // then questions with closely related wording/topic, and only lastly same-type answers.
   buildChoices = function (question) {
     const clean = value => String(value == null ? "" : value).trim();
     const norm = value => clean(value).toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").trim();
     const correct = clean(question.answer);
     const correctKey = norm(correct);
     const qText = clean(question.question);
-    const qNorm = norm(qText);
 
     const unique = items => {
       const seen = new Set([correctKey]);
@@ -48,6 +45,7 @@
       return out;
     };
 
+    // Use authored database choices first when they exist.
     let authored = [];
     if (Array.isArray(question.distractors)) authored.push(...question.distractors);
     if (Array.isArray(question.incorrect_answers)) authored.push(...question.incorrect_answers);
@@ -58,7 +56,14 @@
       return seededShuffle([{text:correct,correct:true}].concat(authored.slice(0,3).map(text=>({text,correct:false}))),hashSeed(qText+correct+"authored-mc"));
     }
 
+    // Most-specific semantic families come first. These are intentionally narrow
+    // so every distractor could reasonably answer the actual question.
     const FAMILIES = [
+      {re:/\bhow long\b.*\b(swimming pool|pool|track|field|court|race|course)\b|\b(length of|long is)\b.*\b(pool|track|field|court)\b/i, values:['25 meters','50 meters','75 meters','100 meters']},
+      {re:/\bhow (tall|high)\b|\bheight of\b/i, values:['10 meters','20 meters','30 meters','50 meters','100 meters']},
+      {re:/\bhow wide\b|\bwidth of\b/i, values:['10 meters','20 meters','25 meters','50 meters','100 meters']},
+      {re:/\bbrain\b.*\b(balance|coordination|motor control|movement)\b|\bpart of the brain\b/i, values:['Cerebellum','Cerebrum','Brainstem','Medulla oblongata','Thalamus','Hypothalamus']},
+      {re:/\b(hardest|hardness)\b.*\b(natural|naturally occurring|mineral|substance|material)\b/i, values:['Diamond','Corundum','Topaz','Quartz','Silicon carbide','Graphite']},
       {re:/\b(chemical symbol|symbol for)\b/i, values:['H','He','Li','Be','B','C','N','O','F','Ne','Na','Mg','Al','Si','P','S','Cl','Ar','K','Ca','Fe','Co','Ni','Cu','Zn','Ag','Sn','I','Au','Hg','Pb','U']},
       {re:/\b(element|elements|periodic table|abundant element)\b/i, values:['Hydrogen','Helium','Oxygen','Carbon','Nitrogen','Neon','Iron','Silicon','Magnesium','Sulfur','Calcium','Sodium','Potassium','Aluminum']},
       {re:/\b(golf|under par|over par|stroke under|stroke over)\b/i, values:['Birdie','Eagle','Albatross','Par','Bogey','Double bogey','Hole-in-one']},
@@ -76,8 +81,7 @@
       {re:/\b(actor|actress|played|portrayed|starred)\b/i, values:['Tom Hanks','Meryl Streep','Denzel Washington','Leonardo DiCaprio','Viola Davis','Robert De Niro','Sandra Bullock','Morgan Freeman','Jodie Foster']},
       {re:/\b(animal|mammal|bird|reptile|fish)\b/i, values:['Lion','Tiger','Elephant','Giraffe','Dolphin','Whale','Eagle','Falcon','Crocodile','Komodo dragon','Shark','Penguin']},
       {re:/\b(body organ|organ in the human body|human organ)\b/i, values:['Heart','Liver','Kidney','Lungs','Pancreas','Spleen','Brain','Stomach','Gallbladder']},
-      {re:/\b(movie|film)\b/i, values:['The Godfather','Jaws','Rocky','Titanic','Casablanca','Goodfellas','Pulp Fiction','Jurassic Park','The Matrix','Gladiator']},
-      {re:/\b(sport|played at|championship|tournament)\b/i, values:['Football','Basketball','Baseball','Hockey','Soccer','Tennis','Golf','Rugby','Cricket','Boxing']}
+      {re:/\b(movie|film)\b/i, values:['The Godfather','Jaws','Rocky','Titanic','Casablanca','Goodfellas','Pulp Fiction','Jurassic Park','The Matrix','Gladiator']}
     ];
 
     const family = FAMILIES.find(f => f.re.test(qText));
@@ -106,7 +110,7 @@
     const shape = text => {
       const s=clean(text);
       if (/^-?\d{3,4}$/.test(s) && Number(s)>=1000 && Number(s)<=2100) return 'year';
-      if (/^-?\d+(?:[.,]\d+)?(?:\s?(?:%|percent|degrees?|miles?|feet|ft|inches?|lbs?|pounds?|kg|kilograms?))?$/i.test(s)) return 'number';
+      if (/^-?\d+(?:[.,]\d+)?(?:\s?(?:%|percent|degrees?|meters?|metres?|miles?|feet|ft|inches?|lbs?|pounds?|kg|kilograms?))?$/i.test(s)) return 'number';
       if (/^[A-Z][a-zA-Z.'-]+(?:\s+[A-Z][a-zA-Z.'-]+){1,5}$/.test(s)) return 'proper-name';
       if (/^[A-Z][a-zA-Z.'-]+$/.test(s)) return 'proper-word';
       return 'text';
